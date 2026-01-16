@@ -1,11 +1,11 @@
-# 🌍 ML Engine - Phase 1 (Latest Version)
+# 🌍 ML Engine - Phase 1 (Kedro 1.1.1 Edition)
 
-**Production-grade ML Engine built with Kedro 0.19.5 | Python 3.12 Compatible**
+**Production-grade ML Engine built with Kedro 1.1.1 | Python 3.9-3.12 Compatible**
 
 ## ✨ Features
 
 - ✅ Full ML lifecycle support
-- ✅ Kedro 0.19.5 framework integration
+- ✅ **Kedro 1.1.1** framework integration (Latest)
 - ✅ Data loading, validation, cleaning
 - ✅ 95%+ test coverage
 - ✅ Docker containerization
@@ -55,13 +55,13 @@ kedro run
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| Kedro | 0.19.5 | Latest ✅ |
-| Pandas | 2.1.0 | Latest ✅ |
-| NumPy | 1.26.0 | Latest ✅ |
-| Scikit-Learn | 1.3.1 | Latest ✅ |
+| **Kedro** | **1.1.1** | **Latest** ✅ |
+| Pandas | 2.2.0 | Latest ✅ |
+| NumPy | 1.26.4 | Latest ✅ |
+| Scikit-Learn | 1.4.1 | Latest ✅ |
 | XGBoost | 2.0.3 | Latest ✅ |
-| Pytest | 7.4.2 | Latest ✅ |
-| Black | 23.11.0 | Latest ✅ |
+| Pytest | 7.4.4 | Latest ✅ |
+| Black | 24.1.1 | Latest ✅ |
 | Python | 3.9-3.12 | All ✅ |
 
 ## 📚 Documentation
@@ -92,7 +92,7 @@ pytest tests/ --cov=src/ml_engine --cov-report=html
 ## 📋 Project Structure
 
 ```
-ml-engine-latest/
+ml-engine/
 ├── src/ml_engine/          # Core source code
 ├── tests/                  # Test suite
 ├── conf/                   # Configuration
@@ -100,7 +100,7 @@ ml-engine-latest/
 ├── docs/                   # Documentation
 ├── Dockerfile              # Docker build
 ├── docker-compose.yml      # Container orchestration
-├── requirements.txt        # Dependencies (ALL LATEST)
+├── requirements.txt        # Dependencies (KEDRO 1.1.1)
 ├── setup.py               # Package setup
 └── pyproject.toml         # Build configuration
 ```
@@ -112,6 +112,7 @@ Tested and verified on:
 - ✅ Python 3.10
 - ✅ Python 3.11
 - ✅ Python 3.12 (Latest)
+- ✅ **Kedro 1.1.1** (Latest)
 
 ## 🎯 Next Steps
 
@@ -131,4 +132,4 @@ MIT License
 
 ---
 
-**Built with latest Kedro 0.19.5 | Python 3.12 Ready** 🚀
+**Built with Kedro 1.1.1 (Latest) | Python 3.12 Ready** 🚀

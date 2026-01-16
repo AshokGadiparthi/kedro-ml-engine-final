@@ -1,14 +1,23 @@
-"""Pipeline registry for Kedro."""
+"""Pipeline registry for Kedro 1.1.1."""
 
 from typing import Dict
+
 from kedro.pipeline import Pipeline
+
 from ml_engine.pipelines.data_loading import create_pipeline as data_loading_pipeline
-from ml_engine.pipelines.data_validation import create_pipeline as data_validation_pipeline
+from ml_engine.pipelines.data_validation import (
+    create_pipeline as data_validation_pipeline,
+)
 from ml_engine.pipelines.data_cleaning import create_pipeline as data_cleaning_pipeline
 from ml_engine.pipelines.end_to_end import create_pipeline as end_to_end_pipeline
 
+
 def register_pipelines() -> Dict[str, Pipeline]:
-    """Register all pipelines."""
+    """Register all pipelines.
+    
+    Returns:
+        Dictionary of pipeline name to pipeline object.
+    """
     return {
         "data_loading": data_loading_pipeline(),
         "data_validation": data_validation_pipeline(),

@@ -1,12 +1,13 @@
-"""Kedro hooks for ML Engine - Kedro 0.19.5 Compatible."""
+"""Kedro hooks for ML Engine - Kedro 1.1.1 Compatible."""
 
 import logging
 from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
+
 class LoggingHook:
-    """Hook for pipeline logging."""
+    """Hook for pipeline logging - Kedro 1.1.1 compatible."""
     
     def before_pipeline_run(
         self,
@@ -42,5 +43,8 @@ class LoggingHook:
         logger.error(f"❌ Pipeline Failed: {str(error)}")
         logger.error("=" * 80)
 
+
+# Register hooks for Kedro 1.1.1
 HOOKS = (LoggingHook(),)
+
 __all__ = ["HOOKS"]
