@@ -1,5 +1,13 @@
-"""Setup configuration for ML Engine - Latest Version."""
+"""Setup configuration for ML Engine - Latest Version (Python 3.12 Compatible)."""
 from setuptools import setup, find_packages
+
+# Read requirements from file
+with open("requirements.txt") as f:
+    requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+
+# Read long description
+with open("README.md", encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="ml-engine",
@@ -7,7 +15,7 @@ setup(
     author="ML Team",
     author_email="ml@example.com",
     description="World-class ML Engine built with Kedro - Python 3.12 Compatible",
-    long_description=open("README.md").read() if __name__ == '__main__' else "",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/youruser/ml-engine",
     packages=find_packages(where="src"),
@@ -48,4 +56,5 @@ setup(
         "Operating System :: OS Independent",
         "Development Status :: 4 - Beta",
     ],
+    include_package_data=True,
 )

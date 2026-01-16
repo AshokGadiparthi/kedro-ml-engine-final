@@ -9,6 +9,7 @@ description = "World-class ML Engine built with Kedro"
 requires-python = ">=3.9"
 authors = [{name = "ML Team", email = "ml@example.com"}]
 license = {text = "MIT"}
+readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -37,13 +38,18 @@ dev = [
     "isort>=5.13.2",
 ]
 
+[tool.setuptools]
+packages = ["ml_engine"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.black]
 line-length = 88
 target-version = ['py39', 'py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
-  # directories
   \.eggs
   | \.git
   | \.hg
