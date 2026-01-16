@@ -1,0 +1,23 @@
+raw_data:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/data.csv
+
+validated_data:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/validated_data.csv
+  save_args:
+    index: false
+
+cleaned_data:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/cleaned_data.csv
+  save_args:
+    index: false
+
+data_validation_report:
+  type: pandas.JSONDataset
+  filepath: data/02_intermediate/validation_report.json
+
+data_cleaning_report:
+  type: pandas.JSONDataset
+  filepath: data/02_intermediate/cleaning_report.json

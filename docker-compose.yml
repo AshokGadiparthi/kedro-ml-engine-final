@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  ml-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-engine
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./src:/app/src
+      - ./conf:/app/conf
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+      - "4141:4141"
+    command: kedro run
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge

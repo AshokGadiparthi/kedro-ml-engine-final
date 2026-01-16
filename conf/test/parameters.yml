@@ -1,0 +1,7 @@
+data_path: "data/01_raw/test_data.csv"
+
+data_processing:
+  test_size: 0.2
+  random_state: 42
+  handle_missing: "median"
+  remove_duplicates: true

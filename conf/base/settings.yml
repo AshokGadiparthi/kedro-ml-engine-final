@@ -1,0 +1,8 @@
+project_name: "ml_engine"
+project_version: "0.1.0"
+package_name: "ml_engine"
+
+hooks:
+  - hook_impl_module: ml_engine.hooks
+
+source_dir: src
