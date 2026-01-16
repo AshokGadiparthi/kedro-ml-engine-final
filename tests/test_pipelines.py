@@ -9,23 +9,26 @@ from ml_engine.pipelines.data_cleaning import create_pipeline as data_cleaning_p
 class TestPipelines:
     """Test pipeline creation and structure."""
     
-    def test_data_loading_pipeline_creation(self):
+    def test_data_loading_pipeline_creation(self) -> None:
         """Test data loading pipeline creation."""
         pipeline = data_loading_pipeline()
+        
         assert isinstance(pipeline, Pipeline)
         assert len(pipeline.nodes) == 1
         assert pipeline.nodes[0].name == "load_raw_data_node"
     
-    def test_data_validation_pipeline_creation(self):
+    def test_data_validation_pipeline_creation(self) -> None:
         """Test data validation pipeline creation."""
         pipeline = data_validation_pipeline()
+        
         assert isinstance(pipeline, Pipeline)
         assert len(pipeline.nodes) == 1
         assert pipeline.nodes[0].name == "validate_data_quality_node"
     
-    def test_data_cleaning_pipeline_creation(self):
+    def test_data_cleaning_pipeline_creation(self) -> None:
         """Test data cleaning pipeline creation."""
         pipeline = data_cleaning_pipeline()
+        
         assert isinstance(pipeline, Pipeline)
         assert len(pipeline.nodes) == 1
         assert pipeline.nodes[0].name == "clean_data_node"

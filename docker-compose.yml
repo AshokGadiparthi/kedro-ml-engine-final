@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   ml-engine:
     build:
@@ -9,10 +10,13 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./models:/app/models
+      - ./notebooks:/app/notebooks
       - ./src:/app/src
       - ./conf:/app/conf
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - KEDRO_LOGGING_CONFIG=/app/conf/base/logging.yml
     ports:
       - "8000:8000"
       - "4141:4141"
@@ -20,6 +24,12 @@ services:
     restart: unless-stopped
     networks:
       - ml-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import kedro; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   ml-network:

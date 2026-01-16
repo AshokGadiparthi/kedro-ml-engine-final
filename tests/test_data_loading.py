@@ -7,19 +7,20 @@ from ml_engine.pipelines.data_loading import load_raw_data
 class TestDataLoading:
     """Test data loading functionality."""
     
-    def test_load_raw_data_success(self, sample_csv_file):
+    def test_load_raw_data_success(self, sample_csv_file: str) -> None:
         """Test successful data loading."""
         df = load_raw_data(sample_csv_file)
+        
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 100
         assert len(df.columns) == 5
     
-    def test_load_raw_data_missing_file(self):
+    def test_load_raw_data_missing_file(self) -> None:
         """Test loading non-existent file."""
         with pytest.raises(FileNotFoundError):
             load_raw_data("nonexistent_file.csv")
     
-    def test_load_raw_data_columns(self, sample_csv_file):
+    def test_load_raw_data_columns(self, sample_csv_file: str) -> None:
         """Test column names are preserved."""
         df = load_raw_data(sample_csv_file)
         expected_cols = {'age', 'income', 'credit_score', 'employed', 'name'}

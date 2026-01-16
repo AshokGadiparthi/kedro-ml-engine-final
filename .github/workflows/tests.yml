@@ -1,4 +1,4 @@
-name: Tests
+name: Tests - Python 3.9 to 3.12
 
 on:
   push:
@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -23,13 +23,27 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -e ".[dev]"
     
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v --cov=src/ml_engine --cov-report=xml
+        pytest tests/ -v --cov=src/ml_engine --cov-report=xml --tb=short
     
     - name: Lint with pylint
       run: |
         pylint src/ml_engine --fail-under=8.5 || true
+    
+    - name: Format check with black
+      run: |
+        black --check src/ml_engine tests/ || true
+    
+    - name: Type checking with mypy
+      run: |
+        mypy src/ml_engine || true
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.12'
+      with:
+        files: ./coverage.xml

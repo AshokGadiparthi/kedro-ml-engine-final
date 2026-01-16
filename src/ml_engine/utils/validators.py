@@ -17,7 +17,7 @@ def validate_dataframe(df: pd.DataFrame, min_rows: int = 10, min_cols: int = 2) 
         "stats": {
             "rows": len(df),
             "columns": len(df.columns),
-            "memory_mb": df.memory_usage(deep=True).sum() / 1024**2,
+            "memory_mb": float(df.memory_usage(deep=True).sum() / 1024**2),
         }
     }
     
@@ -31,7 +31,7 @@ def validate_dataframe(df: pd.DataFrame, min_rows: int = 10, min_cols: int = 2) 
     if empty_cols:
         report["errors"].append(f"Empty columns: {empty_cols}")
     
-    n_duplicates = df.duplicated().sum()
+    n_duplicates = int(df.duplicated().sum())
     if n_duplicates > 0:
         report["warnings"].append(f"{n_duplicates} duplicate rows found")
     

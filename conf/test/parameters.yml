@@ -1,3 +1,4 @@
+# Test parameters override
 data_path: "data/01_raw/test_data.csv"
 
 data_processing:
@@ -5,3 +6,6 @@ data_processing:
   random_state: 42
   handle_missing: "median"
   remove_duplicates: true
+
+evaluation:
+  cv_folds: 3

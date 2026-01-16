@@ -1,4 +1,4 @@
-"""Data Validation Pipeline."""
+"""Data Validation Pipeline - Kedro 0.19.5 Compatible."""
 
 import pandas as pd
 import logging
@@ -9,17 +9,29 @@ from ml_engine.utils.validators import validate_dataframe
 logger = logging.getLogger(__name__)
 
 def validate_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
-    """Validate data quality and generate report."""
+    """Validate data quality and generate report.
+    
+    Args:
+        df: DataFrame to validate
+        
+    Returns:
+        Validation report
+    """
     logger.info("🔍 Validating data quality...")
     
     report = validate_dataframe(df)
     
     logger.info(f"   Rows: {report['stats']['rows']}")
     logger.info(f"   Columns: {report['stats']['columns']}")
+    logger.info(f"   Memory: {report['stats']['memory_mb']:.2f} MB")
     
     if report["errors"]:
         for error in report["errors"]:
             logger.error(f"   ❌ {error}")
+    
+    if report["warnings"]:
+        for warning in report["warnings"]:
+            logger.warning(f"   ⚠️  {warning}")
     
     if report["valid"]:
         logger.info("   ✅ Validation passed")

@@ -1,20 +1,28 @@
+# ML Engine Parameters - Kedro 0.19.5
 data_path: "data/01_raw/data.csv"
 
 data_processing:
   test_size: 0.2
+  validation_size: 0.1
   random_state: 42
   handle_missing: "median"
   remove_duplicates: true
+  handle_outliers: true
+  outlier_method: "iqr"
 
 feature_engineering:
   scaling_method: "standard"
   feature_selection: false
+  n_features: null
 
 algorithms:
   xgboost:
     n_estimators: 100
     learning_rate: 0.1
     max_depth: 6
+    subsample: 0.8
+    colsample_bytree: 0.8
+    objective: "binary:logistic"
     random_state: 42
 
 evaluation:
@@ -24,3 +32,8 @@ evaluation:
     - precision
     - recall
     - f1
+
+server:
+  port: 8000
+  workers: 4
+  log_level: "INFO"
