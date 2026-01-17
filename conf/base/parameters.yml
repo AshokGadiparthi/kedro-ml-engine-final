@@ -13,11 +13,6 @@ data_processing:
   random_state: 42
   handle_missing: true
   
-# Feature engineering parameters
-feature_engineering:
-  scaling_method: "standard"
-  feature_selection_method: "mutual_information"
-  
 # Model parameters
 model:
   algorithm: "linear_regression"
@@ -28,3 +23,35 @@ model:
 validation:
   cv_folds: 5
   scoring_metric: "r2"
+
+# ============================================================================
+# PHASE 2: Advanced Data Processing & Feature Engineering
+# ============================================================================
+
+# Missing Value Imputation Strategy
+missing_value_strategy:
+  method: "mean"                    # mean, median, forward_fill, knn
+  knn_neighbors: 5
+  forward_fill_limit: 3
+
+# Feature Scaling Configuration
+scaling:
+  method: "standard"                # standard, minmax, robust
+  with_mean: true
+  with_std: true
+
+# Feature Engineering Configuration
+feature_engineering:
+  create_polynomial: false
+  polynomial_degree: 2
+  create_interactions: false
+  max_interactions: 10
+  log_transform: false
+
+# Feature Selection Configuration
+feature_selection:
+  method: "correlation"             # correlation, mutual_info, importance, rfe
+  n_features: null
+  threshold: 0.1
+  top_n: 10
+  importance_threshold: 0.01

@@ -54,3 +54,51 @@ data_validation_report:
 # ============================================================================
 memory_data:
   type: kedro.io.MemoryDataset
+
+
+# ============================================================================
+# PHASE 2 DATASETS
+# ============================================================================
+
+# Imputed Data
+imputed_data:
+  type: kedro_datasets.pandas.CSVDataSet
+  filepath: data/02_intermediate/imputed_data.csv
+  save_args:
+    index: false
+
+# Scaled Data
+scaled_data:
+  type: kedro_datasets.pandas.CSVDataSet
+  filepath: data/02_intermediate/scaled_data.csv
+  save_args:
+    index: false
+
+# Engineered Features
+engineered_features:
+  type: kedro_datasets.pandas.CSVDataSet
+  filepath: data/02_intermediate/engineered_features.csv
+  save_args:
+    index: false
+
+# Feature Statistics
+feature_statistics:
+  type: kedro_datasets.json.JSONDataSet
+  filepath: data/02_intermediate/feature_statistics.json
+
+# Correlation Matrix
+correlation_matrix:
+  type: kedro_datasets.pandas.CSVDataSet
+  filepath: data/02_intermediate/correlation_matrix.csv
+
+# Selected Features (Final Output)
+selected_features:
+  type: kedro_datasets.pandas.CSVDataSet
+  filepath: data/03_processed/selected_features.csv
+  save_args:
+    index: false
+
+# Feature Importance
+feature_importance:
+  type: kedro_datasets.json.JSONDataSet
+  filepath: data/03_processed/feature_importance.json
