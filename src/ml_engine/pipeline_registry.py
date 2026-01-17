@@ -3,7 +3,7 @@ Project pipelines.
 """
 
 from typing import Dict
-from kedro.pipeline import Pipeline, pipeline
+from kedro.pipeline import Pipeline
 
 # Import PERFECT Phase 2 pipeline factory functions
 from ml_engine.pipelines.data_loading import create_pipeline as create_data_loading_pipeline
@@ -12,20 +12,21 @@ from ml_engine.pipelines.data_cleaning import create_pipeline as create_data_cle
 from ml_engine.pipelines.feature_engineering import create_pipeline as create_feature_engineering_pipeline
 from ml_engine.pipelines.feature_selection import create_pipeline as create_feature_selection_pipeline
 
-# Optionally import Phase 3 pipelines if they exist
+# Optional Phase 3
 try:
     from ml_engine.pipelines.model_training import create_pipeline as create_model_training_pipeline
 except ImportError:
     create_model_training_pipeline = None
 
 
-def create_pipelines(**kwargs) -> Dict[str, Pipeline]:
+def register_pipelines() -> Dict[str, Pipeline]:
     """
-    Create the project's pipelines.
+    Register the project's pipelines.
+
+    Kedro calls this function to get all available pipelines.
 
     Returns:
-        A mapping from a pipeline name to a ``Pipeline`` object.
-
+        A mapping from pipeline name to Pipeline object.
     """
 
     # Phase 1: Data Loading
