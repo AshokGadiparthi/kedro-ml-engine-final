@@ -1,145 +1,44 @@
-# ============================================================================
-# PERFECT PHASE 2 - PARAMETERS CONFIGURATION
-# ============================================================================
-# This replaces conf/base/parameters.yml with all 5 gaps fixed
+# Data Loading
+data:
+  raw_data_path: "data/01_raw/data.csv"
+  test_size: 0.2
+  random_state: 42
+  stratify: null  # Set to target_column name if classification
 
-# Path to raw input data
-data_path: "data/01_raw/data.csv"
+# Target and Features
+target_column: "col5"  # FIXED: Changed from 'target' to 'col5'
+  # This is the column you're predicting
+# If you want to predict a different column, change this!
 
-# Target column name (in your data file)
-target_column: "target"
-
-# ============================================================================
-# PHASE 1 & 2: DATA LOADING & PROCESSING
-# ============================================================================
-
-data_processing:
-  # 🔐 CRITICAL: Train/test split configuration (Gap 1 Fix)
-  test_size: 0.2                    # 20% test, 80% train
-  random_state: 42                  # For reproducibility
-  stratify: true                    # Use stratified split for classification
-
-  # Problem type (leave blank for auto-detect, Gap 2 Fix)
-  problem_type: null                # Can be: null (auto), "classification", "regression"
-
-  # Missing value handling
-  handle_missing: true
-
-
-# ============================================================================
-# PHASE 2: FEATURE ENGINEERING
-# ============================================================================
-
-feature_engineering:
-  # Missing Value Imputation
-  missing_value_strategy:
-    method: "mean"                  # mean, median, knn
-    knn_neighbors: 5
-
-  # Feature Scaling
-  scaling:
-    method: "standard"              # standard, minmax, robust
-
-  # Categorical Encoding (Gap 4 Fix: Handle mixed data)
-  categorical_encoding: "onehot"    # onehot, label, target, frequency
-
-  # Polynomial Features (Gap 3 Fix: Prevent explosion)
-  polynomial_degree: 2              # 1 = disabled, 2 = x², 3 = x³
-  max_output_features: 1000         # Safety limit to prevent memory crashes
-
-  # Interaction Features
-  create_interactions: false
-  interaction_only: false
-  max_interactions: 10
-
-
-# ============================================================================
-# PHASE 2: FEATURE SELECTION
-# ============================================================================
-
+# Feature Selection
 feature_selection:
-  # Problem Type Detection (Gap 2 Fix)
-  problem_type: null                # Auto-detect or specify
+  method: "variance"  # Options: "variance", "correlation", "importance", "mutual_info"
+  test_size: 0.2
+  max_output_features: 100  # Prevents feature explosion (Gap 3)
 
-  # Feature Importance Calculation (Gap 5 Fix: Use REAL target)
-  importance_method: "tree"         # tree, permutation
+# Categorical Encoding
+categorical:
+  encoding_method: "onehot"  # Options: "onehot", "label", "target", "frequency"
+  handle_unknown: "ignore"
 
-  # Selection Thresholds
-  correlation_threshold: 0.9        # Remove features with > 90% correlation
-  top_k: 20                         # Select top 20 features by importance
-  importance_threshold: 0.01        # Minimum importance score
+# Problem Type Detection
+problem_type:
+  auto_detect: true
+  override: null  # Set to "classification" or "regression" to override auto-detection
 
+# Polynomial Features (Feature Engineering)
+polynomial:
+  degree: 2
+  include_bias: false
 
-# ============================================================================
-# PHASE 3: MODEL TRAINING
-# ============================================================================
-
-model:
-  algorithm: "random_forest"        # linear_regression, random_forest, xgboost
-  hyperparameters:
-    n_estimators: 100
-    max_depth: 10
-    random_state: 42
-
-
-# ============================================================================
-# PHASE 3: VALIDATION
-# ============================================================================
-
+# Data Validation
 validation:
-  cv_folds: 5
-  scoring_metric: "accuracy"        # For classification
-  # scoring_metric: "r2"            # Uncomment for regression
+  check_missing: true
+  check_duplicates: true
+  check_data_types: true
 
-
-# ============================================================================
-# PHASE 2 PERFECT - SUMMARY OF FIXES
-# ============================================================================
-
-# GAP 1 FIX: Data Leakage Prevention
-#   ✅ test_size, random_state, stratify configured
-#   ✅ Train/test split happens FIRST (before preprocessing)
-#   ✅ Preprocessors fit on TRAIN only, transform both
-
-# GAP 2 FIX: Problem Type Detection
-#   ✅ problem_type can be auto-detected or manually specified
-#   ✅ Robust detection based on data type and cardinality
-#   ✅ Used to select correct algorithms and metrics
-
-# GAP 3 FIX: Feature Explosion Guards
-#   ✅ max_output_features prevents memory crashes
-#   ✅ Polynomial features capped at safe levels
-#   ✅ Warning/skip if explosion detected
-
-# GAP 4 FIX: Categorical Feature Handling
-#   ✅ categorical_encoding handles mixed numeric/categorical data
-#   ✅ Separate processing paths for different data types
-#   ✅ Multiple encoding strategies (onehot, label, target, frequency)
-
-# GAP 5 FIX: Real Target Feature Importance
-#   ✅ Importance calculated with ACTUAL y_train (not fake random)
-#   ✅ Tree-based or permutation-based methods
-#   ✅ Meaningful feature ranking based on real relationships
-
-# ============================================================================
-# INTEGRATION INSTRUCTIONS
-# ============================================================================
-
-# 1. Replace conf/base/parameters.yml with this file
-#
-# 2. Replace src/ml_engine/pipelines/ with PERFECT versions:
-#    - PHASE_2_PERFECT_01_data_loading.py → data_loading.py
-#    - PHASE_2_PERFECT_02_feature_engineering.py → feature_engineering.py
-#    - PHASE_2_PERFECT_03_feature_selection.py → feature_selection.py
-#
-# 3. Update src/ml_engine/pipeline_registry.py to import new pipelines
-#
-# 4. Run: kedro run
-#
-# 5. Check logs for:
-#    ✅ "CRITICAL: Train/Test Split BEFORE Preprocessing"
-#    ✅ "FITTING Imputer/Scaler/Encoder on TRAINING data"
-#    ✅ "TRANSFORMING test data with fitted..."
-#    ✅ "FEATURE IMPORTANCE WITH REAL TARGET"
-#
-# If you see these messages, Phase 2 is PERFECT! 🎉
+# Logging
+logging:
+  verbose: true
+  log_feature_importance: true
+  log_problem_type: true
