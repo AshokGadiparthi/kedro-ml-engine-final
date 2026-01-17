@@ -1,44 +1,88 @@
-# Data Loading
-data:
-  raw_data_path: "data/01_raw/data.csv"
+# ════════════════════════════════════════════════════════════════════════════
+# PERFECT Phase 2 Parameters Configuration
+# Complete parameter structure matching all pipeline expectations
+# ════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA PATHS (Required by Phase 1)
+# ─────────────────────────────────────────────────────────────────────────────
+
+data_path: "data/01_raw/data.csv"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA PROCESSING (Required by Phase 2 Feature Engineering)
+# ─────────────────────────────────────────────────────────────────────────────
+
+data_processing:
+  handle_missing: "mean"              # Options: "mean", "median", "forward_fill", "drop"
   test_size: 0.2
   random_state: 42
-  stratify: null  # Set to target_column name if classification
+  stratify: null                       # Set to target_column for stratified split
 
-# Target and Features
-target_column: "col5"  # FIXED: Changed from 'target' to 'col5'
-  # This is the column you're predicting
-# If you want to predict a different column, change this!
+# ─────────────────────────────────────────────────────────────────────────────
+# TARGET & FEATURES (Required by all phases)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Feature Selection
-feature_selection:
-  method: "variance"  # Options: "variance", "correlation", "importance", "mutual_info"
-  test_size: 0.2
-  max_output_features: 100  # Prevents feature explosion (Gap 3)
+target_column: "col5"                  # Column to predict
+exclude_columns: []                    # Columns to exclude from features
 
-# Categorical Encoding
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE ENGINEERING (Phase 2)
+# ─────────────────────────────────────────────────────────────────────────────
+
+feature_engineering:
+  polynomial_degree: 2
+  include_bias: false
+  max_output_features: 100             # Gap 3: Prevents feature explosion
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CATEGORICAL HANDLING (Phase 2 - Gap 4)
+# ─────────────────────────────────────────────────────────────────────────────
+
 categorical:
-  encoding_method: "onehot"  # Options: "onehot", "label", "target", "frequency"
+  encoding_method: "onehot"            # Options: "onehot", "label", "target", "frequency"
   handle_unknown: "ignore"
+  min_frequency: 1
 
-# Problem Type Detection
+# ─────────────────────────────────────────────────────────────────────────────
+# SCALING & NORMALIZATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+scaling:
+  method: "standard"                   # Options: "standard", "minmax", "robust"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE SELECTION (Phase 2 - Gap 5: Real Target Importance)
+# ─────────────────────────────────────────────────────────────────────────────
+
+feature_selection:
+  method: "importance"                 # Options: "variance", "correlation", "importance", "mutual_info"
+  n_features: 10
+  test_size: 0.2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROBLEM TYPE DETECTION (Phase 2 - Gap 2)
+# ─────────────────────────────────────────────────────────────────────────────
+
 problem_type:
   auto_detect: true
-  override: null  # Set to "classification" or "regression" to override auto-detection
+  override: null                       # Set to "classification" or "regression" to override
 
-# Polynomial Features (Feature Engineering)
-polynomial:
-  degree: 2
-  include_bias: false
+# ─────────────────────────────────────────────────────────────────────────────
+# VALIDATION (Phase 1)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Data Validation
 validation:
   check_missing: true
   check_duplicates: true
   check_data_types: true
 
-# Logging
+# ─────────────────────────────────────────────────────────────────────────────
+# LOGGING
+# ─────────────────────────────────────────────────────────────────────────────
+
 logging:
   verbose: true
   log_feature_importance: true
   log_problem_type: true
+  log_preprocessing: true
