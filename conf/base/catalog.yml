@@ -4,7 +4,15 @@
 # ============================================================================
 
 # ============================================================================
-# PHASE 1: Data Loading (CORRECTED DATASET NAMES)
+# PARAMETERS (Required for node inputs using params:)
+# ============================================================================
+
+params:
+  type: kedro.extras.datasets.yaml.YAMLDataset
+  filepath: conf/base/parameters.yml
+
+# ============================================================================
+# PHASE 1: Data Loading
 # ============================================================================
 
 raw_data:
@@ -28,7 +36,7 @@ cleaned_data:
     index: false
 
 # ============================================================================
-# PHASE 2: Feature Engineering (CORRECTED DATASET NAMES)
+# PHASE 2: Feature Engineering
 # ============================================================================
 
 imputed_data:
@@ -60,7 +68,7 @@ feature_statistics:
   filepath: data/02_intermediate/feature_statistics.json
 
 # ============================================================================
-# PHASE 2: Feature Selection (CORRECTED DATASET NAMES)
+# PHASE 2: Feature Selection
 # ============================================================================
 
 correlation_matrix:
