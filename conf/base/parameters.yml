@@ -4,10 +4,14 @@
 # Pipeline parameters used across all nodes.
 # See https://docs.kedro.org/en/stable/configuration/configuration.html
 
+# Path to your raw input file (relative to project root)
+data_path: "data/01_raw/data.csv"
+
 # Data processing parameters
 data_processing:
   test_size: 0.2
   random_state: 42
+  handle_missing: true
   
 # Feature engineering parameters
 feature_engineering:
