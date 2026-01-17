@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 # ============================================================================
-# NODE FUNCTIONS (These are the actual processing functions)
+# NODE FUNCTIONS
 # ============================================================================
 
 def calculate_correlations_node(
@@ -109,7 +109,7 @@ def select_top_features_node(
 
 
 # ============================================================================
-# PIPELINE FACTORY FUNCTION (This creates the actual pipeline)
+# PIPELINE FACTORY FUNCTION
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -125,21 +125,21 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=select_features_by_correlation_node,
-                inputs=["engineered_features", "correlation_matrix", "params:feature_selection"],
+                inputs=["engineered_features", "correlation_matrix", "params:"],
                 outputs="features_after_correlation",
                 name="select_features_by_correlation_node",
                 tags="fs",
             ),
             node(
                 func=calculate_feature_importance_node,
-                inputs=["engineered_features", "params:feature_selection"],
+                inputs=["engineered_features", "params:"],
                 outputs="feature_importance",
                 name="calculate_feature_importance_node",
                 tags="fs",
             ),
             node(
                 func=select_top_features_node,
-                inputs=["features_after_correlation", "feature_importance", "params:feature_selection"],
+                inputs=["engineered_features", "feature_importance", "params:"],
                 outputs="selected_features",
                 name="select_top_features_node",
                 tags="fs",

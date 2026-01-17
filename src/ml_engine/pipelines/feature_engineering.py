@@ -5,10 +5,7 @@ Handles missing values, scaling, encoding, and feature engineering.
 
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import (
-    StandardScaler, MinMaxScaler, RobustScaler,
-    OneHotEncoder, LabelEncoder
-)
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.impute import SimpleImputer, KNNImputer
 import logging
 from typing import Dict, Any
@@ -18,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 # ============================================================================
-# NODE FUNCTIONS (These are the actual processing functions)
+# NODE FUNCTIONS
 # ============================================================================
 
 def handle_missing_values_node(
@@ -156,7 +153,7 @@ def generate_feature_statistics_node(
 
 
 # ============================================================================
-# PIPELINE FACTORY FUNCTION (This creates the actual pipeline)
+# PIPELINE FACTORY FUNCTION
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -165,28 +162,28 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=handle_missing_values_node,
-                inputs=["cleaned_data", "params:missing_value_strategy"],
+                inputs=["cleaned_data", "params:"],
                 outputs="imputed_data",
                 name="handle_missing_values_node",
                 tags="fe",
             ),
             node(
                 func=scale_features_node,
-                inputs=["imputed_data", "params:scaling"],
+                inputs=["imputed_data", "params:"],
                 outputs="scaled_data",
                 name="scale_features_node",
                 tags="fe",
             ),
             node(
                 func=create_polynomial_features_node,
-                inputs=["scaled_data", "params:feature_engineering"],
+                inputs=["scaled_data", "params:"],
                 outputs="polynomial_data",
                 name="create_polynomial_features_node",
                 tags="fe",
             ),
             node(
                 func=create_interaction_features_node,
-                inputs=["polynomial_data", "params:feature_engineering"],
+                inputs=["polynomial_data", "params:"],
                 outputs="engineered_features",
                 name="create_interaction_features_node",
                 tags="fe",
