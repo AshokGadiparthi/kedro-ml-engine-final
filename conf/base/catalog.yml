@@ -1,10 +1,12 @@
 # ============================================================================
-# Kedro Data Catalog - Kedro 1.1.1 Compatible (with kedro-datasets[pandas])
+# COMPLETE CORRECTED CATALOG.YML FOR PHASE 1 & 2
+# Dataset names corrected for kedro-datasets 2.0+ (lowercase 's')
 # ============================================================================
-# This file contains dataset definitions used in the Kedro pipelines.
-# Use: kedro_datasets.pandas.CSVDataset (not pandas.CSVDataset)
 
-# Raw data - Input
+# ============================================================================
+# PHASE 1: Data Loading (CORRECTED DATASET NAMES)
+# ============================================================================
+
 raw_data:
   type: kedro_datasets.pandas.CSVDataset
   filepath: data/01_raw/data.csv
@@ -13,92 +15,72 @@ raw_data:
   save_args:
     index: false
 
-# Intermediate data - After validation
 validated_data:
   type: kedro_datasets.pandas.CSVDataset
   filepath: data/02_intermediate/validated_data.csv
   save_args:
     index: false
 
-# Processed data - After cleaning
-processed_data:
+cleaned_data:
   type: kedro_datasets.pandas.CSVDataset
   filepath: data/03_processed/processed_data.csv
   save_args:
     index: false
 
-# Final data - Ready for modeling
-final_data:
-  type: kedro_datasets.pandas.CSVDataset
-  filepath: data/04_final/final_data.csv
-  save_args:
-    index: false
-
-cleaned_data:
-  type: kedro_datasets.pandas.CSVDataset
-  filepath: data/02_intermediate/cleaned_data.csv
-  save_args:
-    index: false
-
-data_cleaning_report:
-  type: kedro_datasets.json.JSONDataset
-  filepath: data/08_reporting/data_cleaning_report.json
-
-data_validation_report:
-  type: kedro_datasets.json.JSONDataset
-  filepath: data/08_reporting/data_validation_report.json
-
-
 # ============================================================================
-# Memory datasets for intermediate results
-# ============================================================================
-memory_data:
-  type: kedro.io.MemoryDataset
-
-
-# ============================================================================
-# PHASE 2 DATASETS
+# PHASE 2: Feature Engineering (CORRECTED DATASET NAMES)
 # ============================================================================
 
-# Imputed Data
 imputed_data:
-  type: kedro_datasets.pandas.CSVDataSet
+  type: kedro_datasets.pandas.CSVDataset
   filepath: data/02_intermediate/imputed_data.csv
   save_args:
     index: false
 
-# Scaled Data
 scaled_data:
-  type: kedro_datasets.pandas.CSVDataSet
+  type: kedro_datasets.pandas.CSVDataset
   filepath: data/02_intermediate/scaled_data.csv
   save_args:
     index: false
 
-# Engineered Features
+polynomial_data:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/02_intermediate/polynomial_data.csv
+  save_args:
+    index: false
+
 engineered_features:
-  type: kedro_datasets.pandas.CSVDataSet
+  type: kedro_datasets.pandas.CSVDataset
   filepath: data/02_intermediate/engineered_features.csv
   save_args:
     index: false
 
-# Feature Statistics
 feature_statistics:
-  type: kedro_datasets.json.JSONDataSet
+  type: kedro_datasets.json.JSONDataset
   filepath: data/02_intermediate/feature_statistics.json
 
-# Correlation Matrix
-correlation_matrix:
-  type: kedro_datasets.pandas.CSVDataSet
-  filepath: data/02_intermediate/correlation_matrix.csv
+# ============================================================================
+# PHASE 2: Feature Selection (CORRECTED DATASET NAMES)
+# ============================================================================
 
-# Selected Features (Final Output)
-selected_features:
-  type: kedro_datasets.pandas.CSVDataSet
-  filepath: data/03_processed/selected_features.csv
+correlation_matrix:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/02_intermediate/correlation_matrix.csv
   save_args:
     index: false
 
-# Feature Importance
+features_after_correlation:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/02_intermediate/features_after_correlation.csv
+  save_args:
+    index: false
+
 feature_importance:
-  type: kedro_datasets.json.JSONDataSet
+  type: kedro_datasets.json.JSONDataset
   filepath: data/03_processed/feature_importance.json
+
+selected_features:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/03_processed/selected_features.csv
+  save_args:
+    index: false
