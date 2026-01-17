@@ -34,6 +34,21 @@ final_data:
   save_args:
     index: false
 
+cleaned_data:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/02_intermediate/cleaned_data.csv
+  save_args:
+    index: false
+
+data_cleaning_report:
+  type: kedro_datasets.json.JSONDataset
+  filepath: data/08_reporting/data_cleaning_report.json
+
+data_validation_report:
+  type: kedro_datasets.json.JSONDataset
+  filepath: data/08_reporting/data_validation_report.json
+
+
 # ============================================================================
 # Memory datasets for intermediate results
 # ============================================================================
