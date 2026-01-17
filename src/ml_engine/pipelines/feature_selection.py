@@ -1,5 +1,5 @@
 """
-Feature Selection Pipeline - Phase 2 (CORRECTED)
+Feature Selection Pipeline - Phase 2 (EXPERT CORRECTED)
 Selects best features based on multiple criteria.
 """
 
@@ -33,14 +33,9 @@ def select_features_by_correlation_node(
         params: Dict[str, Any]
 ) -> pd.DataFrame:
     """Select features based on correlation threshold."""
-    fs_config = params['feature_selection']
-
-    if fs_config['method'] != 'correlation':
-        log.info("⏭️ Correlation method not selected, returning all features")
-        return engineered_features
+    threshold = params.get('correlation_threshold', 0.9)
 
     log.info("🔧 Selecting features by correlation")
-    threshold = fs_config.get('threshold', 0.1)
     selected_cols = list(engineered_features.columns)
 
     for i in range(len(correlation_matrix.columns)):
@@ -93,15 +88,10 @@ def select_top_features_node(
         params: Dict[str, Any]
 ) -> pd.DataFrame:
     """Select top N features by importance."""
-    fs_config = params['feature_selection']
-
-    if fs_config['method'] != 'importance':
-        log.info("⏭️ Importance method not selected, returning all features")
-        return engineered_features
+    top_k = params.get('top_k', 20)
 
     log.info("🔧 Selecting features by importance")
-    n_features = fs_config.get('top_n', 10)
-    selected_cols = list(dict(list(feature_importance.items())[:n_features]).keys())
+    selected_cols = list(dict(list(feature_importance.items())[:top_k]).keys())
 
     selected_features = engineered_features[selected_cols]
     log.info(f"✅ Selected top {len(selected_cols)} features")
@@ -125,21 +115,21 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=select_features_by_correlation_node,
-                inputs=["engineered_features", "correlation_matrix", "params:"],
+                inputs=["engineered_features", "correlation_matrix", "params:feature_selection"],  # ✅ FIXED
                 outputs="features_after_correlation",
                 name="select_features_by_correlation_node",
                 tags="fs",
             ),
             node(
                 func=calculate_feature_importance_node,
-                inputs=["engineered_features", "params:"],
+                inputs=["engineered_features", "params:feature_selection"],  # ✅ FIXED
                 outputs="feature_importance",
                 name="calculate_feature_importance_node",
                 tags="fs",
             ),
             node(
                 func=select_top_features_node,
-                inputs=["engineered_features", "feature_importance", "params:"],
+                inputs=["engineered_features", "feature_importance", "params:feature_selection"],  # ✅ FIXED
                 outputs="selected_features",
                 name="select_top_features_node",
                 tags="fs",
