@@ -45,15 +45,11 @@ dev = [
 ]
 
 [tool.kedro]
-# REQUIRED FIELDS FOR KEDRO 1.1.1
-project_name = "ml_engine"
+# ONLY VALID KEYS FOR KEDRO 1.1.1
 package_name = "ml_engine"
+project_name = "ml_engine"
 kedro_init_version = "1.1.1"
-project_path = "."
 source_dir = "src"
-config_path = "conf"
-hooks_path = "src/ml_engine/hooks"
-settings_path = "src/ml_engine/settings.py"
 
 [tool.setuptools]
 packages = ["ml_engine"]
