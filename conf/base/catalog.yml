@@ -1,5 +1,5 @@
 # ============================================================================
-# Kedro Data Catalog - Kedro 1.1.1 Compatible
+# Kedro Data Catalog - Kedro 1.1.1 Compatible (with kedro-datasets)
 # ============================================================================
 # This file contains dataset definitions used in the Kedro pipelines.
 # See https://docs.kedro.org/en/stable/data/data_catalog.html for details.
@@ -35,7 +35,7 @@ final_data:
     index: false
 
 # ============================================================================
-# Optional: Memory datasets for intermediate results
+# Memory datasets for intermediate results
 # ============================================================================
 memory_data:
   type: pandas.MemoryDataSet

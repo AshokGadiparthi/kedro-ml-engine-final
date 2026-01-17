@@ -1,24 +1,29 @@
-# Data Catalog - Kedro 0.19.5
+# ============================================================================
+# Kedro Data Catalog - Alternative Format
+# ============================================================================
+
 raw_data:
-  type: pandas.CSVDataset
+  type: pandas.CSVDataSet
   filepath: data/01_raw/data.csv
+  load_args:
+    sep: ","
+  save_args:
+    index: false
 
 validated_data:
-  type: pandas.CSVDataset
+  type: pandas.CSVDataSet
   filepath: data/02_intermediate/validated_data.csv
   save_args:
     index: false
 
-cleaned_data:
-  type: pandas.CSVDataset
-  filepath: data/02_intermediate/cleaned_data.csv
+processed_data:
+  type: pandas.CSVDataSet
+  filepath: data/03_processed/processed_data.csv
   save_args:
     index: false
 
-data_validation_report:
-  type: pandas.JSONDataset
-  filepath: data/02_intermediate/validation_report.json
-
-data_cleaning_report:
-  type: pandas.JSONDataset
-  filepath: data/02_intermediate/cleaning_report.json
+final_data:
+  type: pandas.CSVDataSet
+  filepath: data/04_final/final_data.csv
+  save_args:
+    index: false
