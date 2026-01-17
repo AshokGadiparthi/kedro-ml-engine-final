@@ -38,4 +38,4 @@ final_data:
 # Memory datasets for intermediate results
 # ============================================================================
 memory_data:
-  type: pandas.MemoryDataset
+  type: kedro.io.MemoryDataset
