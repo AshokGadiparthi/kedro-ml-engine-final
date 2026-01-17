@@ -1,9 +1,23 @@
-# Kedro settings for ML Engine
-project_name: "ml_engine"
-project_version: "0.2.0"
-package_name: "ml_engine"
+# ============================================================================
+# Kedro Settings - Kedro 1.1.1 Compatible
+# ============================================================================
+# Kedro project settings.
+# See https://docs.kedro.org/en/stable/configuration/settings.html
 
-hooks:
-  - hook_impl_module: ml_engine.hooks
+# Project name
+project_name: ml_engine
 
+# Package name
+package_name: ml_engine
+
+# Kedro version
+kedro_init_version: 1.1.1
+
+# Source directory
 source_dir: src
+
+# Data catalog file path
+data_catalog_yaml_path: conf/base/catalog.yml
+
+# Parameters file path
+parameters_yaml_path: conf/base/parameters.yml

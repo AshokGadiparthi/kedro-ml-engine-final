@@ -1,0 +1,41 @@
+# ============================================================================
+# Kedro Data Catalog - Kedro 1.1.1 Compatible
+# ============================================================================
+# This file contains dataset definitions used in the Kedro pipelines.
+# See https://docs.kedro.org/en/stable/data/data_catalog.html for details.
+
+# Raw data - Input
+raw_data:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/data.csv
+  load_args:
+    sep: ","
+  save_args:
+    index: false
+
+# Intermediate data - After validation
+validated_data:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/validated_data.csv
+  save_args:
+    index: false
+
+# Processed data - After cleaning
+processed_data:
+  type: pandas.CSVDataSet
+  filepath: data/03_processed/processed_data.csv
+  save_args:
+    index: false
+
+# Final data - Ready for modeling
+final_data:
+  type: pandas.CSVDataSet
+  filepath: data/04_final/final_data.csv
+  save_args:
+    index: false
+
+# ============================================================================
+# Optional: Memory datasets for intermediate results
+# ============================================================================
+memory_data:
+  type: pandas.MemoryDataSet
