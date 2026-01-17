@@ -1,15 +1,8 @@
 # ============================================================================
-# COMPLETE CORRECTED CATALOG.YML FOR PHASE 1 & 2
+# FINAL CORRECTED CATALOG.YML FOR PHASE 1 & 2
 # Dataset names corrected for kedro-datasets 2.0+ (lowercase 's')
+# NOTE: Do NOT define 'params:' here - Kedro handles it automatically!
 # ============================================================================
-
-# ============================================================================
-# PARAMETERS (Required for node inputs using params:)
-# ============================================================================
-
-params:
-  type: kedro.extras.datasets.yaml.YAMLDataset
-  filepath: conf/base/parameters.yml
 
 # ============================================================================
 # PHASE 1: Data Loading
