@@ -1,6 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# Kedro Data Catalog for PERFECT Phase 2 - MODERN KEDRO (>= 0.18.0)
-# Uses updated dataset type names
+# Kedro Data Catalog for PERFECT Phase 2 - CORRECT naming: CSVDataset
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -8,7 +7,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 raw_data:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/01_raw/data.csv
   load_args:
     engine: python
@@ -18,13 +17,13 @@ raw_data:
 # ─────────────────────────────────────────────────────────────────────────────
 
 validated_data:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/02_intermediate/validated_data.csv
   save_args:
     index: false
 
 validation_report:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/validation_report.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +31,7 @@ validation_report:
 # ─────────────────────────────────────────────────────────────────────────────
 
 cleaned_data:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/02_intermediate/cleaned_data.csv
   save_args:
     index: false
@@ -42,32 +41,32 @@ cleaned_data:
 # ─────────────────────────────────────────────────────────────────────────────
 
 X_train_raw:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_raw.csv
   save_args:
     index: false
 
 X_test_raw:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_raw.csv
   save_args:
     index: false
 
 y_train:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/y_train.csv
   save_args:
     index: false
 
 y_test:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/y_test.csv
   save_args:
     index: false
 
 # Split configuration (CRITICAL for Gap 1: Data Leakage Prevention)
 train_test_split_config:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/train_test_split_config.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -75,49 +74,49 @@ train_test_split_config:
 # ─────────────────────────────────────────────────────────────────────────────
 
 X_train_imputed:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_imputed.csv
   save_args:
     index: false
 
 X_test_imputed:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_imputed.csv
   save_args:
     index: false
 
 X_train_scaled:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_scaled.csv
   save_args:
     index: false
 
 X_test_scaled:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_scaled.csv
   save_args:
     index: false
 
 X_train_encoded:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_encoded.csv
   save_args:
     index: false
 
 X_test_encoded:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_encoded.csv
   save_args:
     index: false
 
 X_train_engineered:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_engineered.csv
   save_args:
     index: false
 
 X_test_engineered:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_engineered.csv
   save_args:
     index: false
@@ -127,15 +126,15 @@ X_test_engineered:
 # ─────────────────────────────────────────────────────────────────────────────
 
 imputer_config:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/06_models/imputer.pkl
 
 scaler_config:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/06_models/scaler.pkl
 
 encoder_config:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/06_models/encoder.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -143,25 +142,25 @@ encoder_config:
 # ─────────────────────────────────────────────────────────────────────────────
 
 X_train_selected:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_train_selected.csv
   save_args:
     index: false
 
 X_test_selected:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_selected.csv
   save_args:
     index: false
 
 feature_importance:
-  type: pandas.csv_dataset.CSVDataSet
+  type: pandas.csv_dataset.CSVDataset
   filepath: data/08_reporting/feature_importance.csv
   save_args:
     index: false
 
 selected_features:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/selected_features.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +168,7 @@ selected_features:
 # ─────────────────────────────────────────────────────────────────────────────
 
 problem_type_result:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/problem_type_result.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,5 +176,5 @@ problem_type_result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 data_summary:
-  type: pickle.pickle_dataset.PickleDataSet
+  type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/data_summary.pkl
