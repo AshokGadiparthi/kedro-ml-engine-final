@@ -1,11 +1,9 @@
 """
-PHASE 3: MODEL TRAINING & EVALUATION WITH PATH A CROSS-VALIDATION
+PHASE 3: MODEL TRAINING & EVALUATION WITH PATH B FEATURE SCALING & ADVANCED TUNING
 ================================================================================
-UPDATED: Added 5-fold cross-validation (StratifiedKFold)
-Completely independent - auto-detects problem type from y_train
-No dependencies on problem_type from Phase 2 catalog
+UPDATED: Added feature scaling + advanced hyperparameter tuning + cross-validation
 Inputs: X_train_selected, X_test_selected, y_train, y_test (ONLY)
-Outputs: baseline_model, best_model, model_evaluation, phase3_predictions
+Outputs: baseline_model, best_model, model_evaluation, phase3_predictions, scalers
 ================================================================================
 """
 
@@ -18,13 +16,77 @@ import json
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.metrics import (
     mean_squared_error, r2_score, mean_absolute_error,
-    accuracy_score, precision_score, recall_score, f1_score, classification_report
+    accuracy_score, precision_score, recall_score, f1_score, classification_report,
+    roc_auc_score, roc_curve, confusion_matrix, auc
 )
 from kedro.pipeline import Pipeline, node
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 log = logging.getLogger(__name__)
+
+
+# ============================================================================
+# PHASE 3.0: FEATURE SCALING (PATH B - NEW)
+# ============================================================================
+
+def scale_features(
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        scaling_method: str = "standard"
+) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, object]]:
+    """
+    Scale numeric features using StandardScaler or RobustScaler (PATH B)
+
+    Args:
+        X_train: Training features
+        X_test: Test features
+        scaling_method: "standard" (StandardScaler) or "robust" (RobustScaler)
+
+    Returns:
+        Scaled X_train, scaled X_test, scaler objects dict
+    """
+    log.info("="*80)
+    log.info("🔄 PHASE 3.0: FEATURE SCALING (PATH B)")
+    log.info("="*80)
+
+    # Get numeric columns
+    numeric_cols = X_train.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+
+    log.info(f"Found {len(numeric_cols)} numeric columns to scale")
+    log.info(f"Found {len(categorical_cols)} categorical columns (unchanged)")
+
+    X_train_scaled = X_train.copy()
+    X_test_scaled = X_test.copy()
+    scalers = {}
+
+    if scaling_method == "robust":
+        log.info("Using RobustScaler (handles outliers better)")
+        scaler = RobustScaler()
+    else:
+        log.info("Using StandardScaler (default)")
+        scaler = StandardScaler()
+
+    # Fit scaler on train data, transform both train and test
+    if len(numeric_cols) > 0:
+        X_train_scaled[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
+        X_test_scaled[numeric_cols] = scaler.transform(X_test[numeric_cols])
+
+        # Store scaler
+        scalers['numeric_scaler'] = scaler
+        scalers['numeric_cols'] = numeric_cols
+
+        log.info(f"✅ Scaled {len(numeric_cols)} numeric columns")
+        log.info(f"   Train shape: {X_train_scaled.shape}")
+        log.info(f"   Test shape: {X_test_scaled.shape}")
+
+    log.info("="*80)
+
+    return X_train_scaled, X_test_scaled, scalers
 
 
 # ============================================================================
@@ -43,8 +105,7 @@ def detect_problem_type_from_target(y_train: pd.Series) -> str:
     # FIX: Handle case where y_train is passed as DataFrame instead of Series
     if isinstance(y_train, pd.DataFrame):
         log.info("ℹ️  Input is DataFrame, converting to Series...")
-        y_train = y_train.iloc[:, 0]  # Extract first column as Series
-        log.info(f"ℹ️  Converted DataFrame to Series: {y_train.name}")
+        y_train = y_train.iloc[:, 0]
 
     # Check unique values
     n_unique = y_train.nunique()
@@ -64,7 +125,7 @@ def detect_problem_type_from_target(y_train: pd.Series) -> str:
 
 
 # ============================================================================
-# PHASE 3.2: TRAIN BASELINE MODEL WITH PATH A CROSS-VALIDATION
+# PHASE 3.2: TRAIN BASELINE MODEL WITH SCALED FEATURES
 # ============================================================================
 
 def train_baseline_model(
@@ -73,11 +134,11 @@ def train_baseline_model(
         params: Dict[str, Any]
 ) -> Tuple[object, Dict[str, float], str]:
     """
-    Train simple baseline model with 5-fold cross-validation (PATH A)
+    Train simple baseline model with scaled features + 5-fold cross-validation
     Returns: model, metrics, problem_type
     """
     log.info("="*80)
-    log.info("PHASE 3.2: TRAINING BASELINE MODEL WITH PATH A CROSS-VALIDATION")
+    log.info("PHASE 3.2: TRAINING BASELINE MODEL WITH SCALED FEATURES")
     log.info("="*80)
 
     # FIX: Handle DataFrame input for y_train
@@ -96,7 +157,7 @@ def train_baseline_model(
         metrics = {'accuracy': float(train_score)}
 
         # ════════════════════════════════════════════════════════════════════
-        # ✨ PATH A: 5-FOLD CROSS-VALIDATION (NEW)
+        # ✨ PATH A: 5-FOLD CROSS-VALIDATION
         # ════════════════════════════════════════════════════════════════════
 
         log.info("="*80)
@@ -139,7 +200,7 @@ def train_baseline_model(
 
 
 # ============================================================================
-# PHASE 3.3: HYPERPARAMETER TUNING
+# PHASE 3.3: ADVANCED HYPERPARAMETER TUNING (PATH B ENHANCED)
 # ============================================================================
 
 def hyperparameter_tuning(
@@ -149,48 +210,71 @@ def hyperparameter_tuning(
         params: Dict[str, Any]
 ) -> Tuple[object, Dict[str, Any]]:
     """
-    GridSearchCV for hyperparameter tuning with cross-validation
+    Advanced GridSearchCV for hyperparameter tuning with expanded param grids (PATH B)
     """
     log.info("="*80)
-    log.info("PHASE 3.3: HYPERPARAMETER TUNING WITH GRIDSEARCHCV")
+    log.info("PHASE 3.3: ADVANCED HYPERPARAMETER TUNING WITH GRIDSEARCHCV (PATH B)")
     log.info("="*80)
 
     # FIX: Handle DataFrame input for y_train
     if isinstance(y_train, pd.DataFrame):
         y_train = y_train.iloc[:, 0]
 
-    cv_folds = 5
-
     if problem_type == 'classification':
-        log.info("🎯 Tuning RandomForestClassifier...")
+        log.info("🎯 Advanced tuning for RandomForestClassifier...")
         model = RandomForestClassifier(random_state=42, n_jobs=-1)
+
+        # PATH B: Expanded parameter grid for better optimization
         param_grid = {
-            'n_estimators': [50, 100],
-            'max_depth': [5, 10, 15],
-            'min_samples_split': [2, 5]
+            'n_estimators': [100, 150, 200],      # More options
+            'max_depth': [5, 10, 15, 20],         # Deeper trees
+            'min_samples_split': [2, 5, 10],      # More options
+            'min_samples_leaf': [1, 2, 4],        # New parameter
+            'max_features': ['sqrt', 'log2'],     # New parameter
+            'bootstrap': [True]
         }
 
-        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
+        grid_search = GridSearchCV(
+            model, param_grid,
+            cv=5,
+            scoring='accuracy',
+            n_jobs=-1,
+            verbose=1
+        )
         grid_search.fit(X_train, y_train)
 
         log.info(f"✅ Best params: {grid_search.best_params_}")
         log.info(f"✅ Best CV accuracy: {grid_search.best_score_:.4f}")
+        log.info(f"✅ Mean test score: {grid_search.cv_results_['mean_test_score'].mean():.4f}")
 
         tuning_info = {
             'best_params': grid_search.best_params_,
             'best_score': float(grid_search.best_score_),
-            'algorithm': 'RandomForestClassifier'
+            'algorithm': 'RandomForestClassifier',
+            'grid_size': len(param_grid),
+            'cv_folds': 5
         }
     else:
-        log.info("🎯 Tuning GradientBoostingRegressor...")
+        log.info("🎯 Advanced tuning for GradientBoostingRegressor...")
         model = GradientBoostingRegressor(random_state=42)
+
+        # PATH B: Expanded parameter grid
         param_grid = {
-            'n_estimators': [50, 100],
-            'learning_rate': [0.01, 0.1],
-            'max_depth': [3, 5, 7]
+            'n_estimators': [100, 150, 200],
+            'learning_rate': [0.001, 0.01, 0.05, 0.1],
+            'max_depth': [3, 5, 7, 10],
+            'min_samples_split': [2, 5],
+            'min_samples_leaf': [1, 2],
+            'subsample': [0.8, 1.0]
         }
 
-        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
+        grid_search = GridSearchCV(
+            model, param_grid,
+            cv=5,
+            scoring='r2',
+            n_jobs=-1,
+            verbose=1
+        )
         grid_search.fit(X_train, y_train)
 
         log.info(f"✅ Best params: {grid_search.best_params_}")
@@ -199,9 +283,12 @@ def hyperparameter_tuning(
         tuning_info = {
             'best_params': grid_search.best_params_,
             'best_score': float(grid_search.best_score_),
-            'algorithm': 'GradientBoostingRegressor'
+            'algorithm': 'GradientBoostingRegressor',
+            'grid_size': len(param_grid),
+            'cv_folds': 5
         }
 
+    log.info("="*80)
     return grid_search.best_estimator_, tuning_info
 
 
@@ -242,6 +329,30 @@ def evaluate_model(
         log.info(f"  ✅ Test accuracy: {test_acc:.4f}")
         log.info(f"  ✅ Overfit gap: {(train_acc - test_acc):.4f}")
 
+        # ════════════════════════════════════════════════════════════════════
+        # ✨ PATH B: ROC-AUC & CONFUSION MATRIX (NEW)
+        # ════════════════════════════════════════════════════════════════════
+
+        log.info("-"*80)
+        log.info("🎯 PATH B: ROC-AUC & CONFUSION MATRIX ANALYSIS")
+        log.info("-"*80)
+
+        # Get probabilities for ROC curve
+        if hasattr(model, 'predict_proba'):
+            y_test_proba = model.predict_proba(X_test)[:, 1]
+            roc_auc = roc_auc_score(y_test, y_test_proba)
+            log.info(f"✅ ROC-AUC Score: {roc_auc:.4f}")
+        else:
+            roc_auc = None
+            log.info("⚠️  Model doesn't support predict_proba")
+
+        # Confusion Matrix
+        cm = confusion_matrix(y_test, y_test_pred)
+        tn, fp, fn, tp = cm.ravel() if cm.size == 4 else (cm[0, 0], 0, 0, cm[-1, -1])
+        log.info(f"✅ Confusion Matrix:")
+        log.info(f"   True Negatives: {tn}, False Positives: {fp}")
+        log.info(f"   False Negatives: {fn}, True Positives: {tp}")
+
         evaluation = {
             'train_accuracy': float(train_acc),
             'test_accuracy': float(test_acc),
@@ -250,6 +361,9 @@ def evaluate_model(
             'test_precision': float(precision_score(y_test, y_test_pred, average='weighted', zero_division=0)),
             'train_f1': float(f1_score(y_train, y_train_pred, average='weighted', zero_division=0)),
             'test_f1': float(f1_score(y_test, y_test_pred, average='weighted', zero_division=0)),
+            'roc_auc': float(roc_auc) if roc_auc else None,
+            'confusion_matrix': cm.tolist(),
+            'tn': int(tn), 'fp': int(fp), 'fn': int(fn), 'tp': int(tp)
         }
 
         log.info("\n📋 Classification Report (Test Set):")
@@ -375,12 +489,11 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
     Complete Phase 3 pipeline: Model Training & Evaluation
 
-    UPDATED WITH PATH A:
-    - Added 5-fold cross-validation (StratifiedKFold)
-    - No catalog dependencies on problem_type
-    - Auto-detects from y_train
-    - Handles DataFrame inputs (converts to Series)
-    - Completely independent of Phase 2
+    UPDATED WITH PATH B:
+    - Added feature scaling (StandardScaler)
+    - Enhanced hyperparameter tuning (expanded param grids)
+    - Added ROC-AUC & Confusion Matrix analysis
+    - Added 5-fold cross-validation
 
     Inputs (from Phase 2):
       - X_train_selected: Final engineered features
@@ -389,30 +502,38 @@ def create_pipeline(**kwargs) -> Pipeline:
       - y_test: Test target (Series or DataFrame)
 
     Outputs:
+      - X_train_scaled, X_test_scaled, scalers (PATH B)
       - baseline_model, baseline_metrics
       - best_model, tuning_info
-      - model_evaluation
+      - model_evaluation (with ROC-AUC & confusion matrix)
       - phase3_predictions
     """
 
     return Pipeline([
         node(
+            func=scale_features,
+            inputs=["X_train_selected", "X_test_selected"],
+            outputs=["X_train_scaled", "X_test_scaled", "scalers"],
+            name="phase3_scale_features"
+        ),
+
+        node(
             func=train_baseline_model,
-            inputs=["X_train_selected", "y_train", "params:problem_type"],
+            inputs=["X_train_scaled", "y_train", "params:problem_type"],
             outputs=["baseline_model", "baseline_metrics", "problem_type"],
             name="phase3_train_baseline"
         ),
 
         node(
             func=hyperparameter_tuning,
-            inputs=["X_train_selected", "y_train", "problem_type", "params:feature_selection"],
+            inputs=["X_train_scaled", "y_train", "problem_type", "params:feature_selection"],
             outputs=["best_model", "tuning_info"],
             name="phase3_hyperparameter_tuning"
         ),
 
         node(
             func=evaluate_model,
-            inputs=["best_model", "X_train_selected", "X_test_selected", "y_train", "y_test", "problem_type"],
+            inputs=["best_model", "X_train_scaled", "X_test_scaled", "y_train", "y_test", "problem_type"],
             outputs="model_evaluation",
             name="phase3_evaluate_model"
         ),
@@ -426,7 +547,7 @@ def create_pipeline(**kwargs) -> Pipeline:
 
         node(
             func=make_predictions,
-            inputs=["best_model", "X_test_selected", "y_test", "problem_type"],
+            inputs=["best_model", "X_test_scaled", "y_test", "problem_type"],
             outputs="phase3_predictions",
             name="phase3_make_predictions"
         ),

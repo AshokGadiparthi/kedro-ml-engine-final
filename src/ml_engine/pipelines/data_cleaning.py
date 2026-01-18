@@ -1,9 +1,10 @@
-"""Data Cleaning Pipeline - Kedro 0.19.5 Compatible WITH OUTLIER DETECTION (PATH A)."""
+"""Data Cleaning Pipeline WITH PATH B FEATURE SCALING."""
 
 import pandas as pd
 import numpy as np
 import logging
 from typing import Tuple, Dict, Any
+from sklearn.preprocessing import StandardScaler
 from kedro.pipeline import Pipeline, node
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ def clean_data(
         handle_missing: str = "median",
         remove_duplicates: bool = True,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-    """Clean data with standard preprocessing + PATH A outlier detection.
+    """Clean data with PATH A + PATH B feature scaling.
 
     Args:
         df: DataFrame to clean
@@ -29,18 +30,16 @@ def clean_data(
     report: Dict[str, Any] = {"original_shape": df.shape, "actions": []}
 
     # ════════════════════════════════════════════════════════════════════════
-    # ✨ PATH A: OUTLIER DETECTION & CAPPING (NEW)
+    # ✨ PATH A: OUTLIER DETECTION & CAPPING
     # ════════════════════════════════════════════════════════════════════════
 
     logger.info("="*80)
     logger.info("🔍 STARTING OUTLIER DETECTION (PATH A)")
     logger.info("="*80)
 
-    # Get numeric columns
     numeric_cols = df_clean.select_dtypes(include=['int64', 'float64']).columns.tolist()
     logger.info(f"Found {len(numeric_cols)} numeric columns for outlier detection")
 
-    # Detect outliers using IQR method
     outliers_per_col = {}
     total_outliers = 0
 
@@ -62,7 +61,6 @@ def clean_data(
 
     logger.info(f"Total outliers found: {total_outliers} across {len(numeric_cols)} columns")
 
-    # CAP OUTLIERS (instead of removing to preserve data)
     logger.info("Capping outliers to reasonable bounds...")
     for col in numeric_cols:
         Q1 = df_clean[col].quantile(0.25)
@@ -71,7 +69,6 @@ def clean_data(
         lower_bound = Q1 - 1.5 * IQR
         upper_bound = Q3 + 1.5 * IQR
 
-        # Cap values
         df_clean[col] = df_clean[col].clip(lower_bound, upper_bound)
 
     logger.info("✅ Outliers capped successfully")
@@ -80,7 +77,7 @@ def clean_data(
     report["actions"].append(f"Detected and capped {total_outliers} outliers")
 
     # ════════════════════════════════════════════════════════════════════════
-    # ✨ PATH A: DUPLICATE DETECTION & REMOVAL (ENHANCED)
+    # ✨ PATH A: DUPLICATE DETECTION & REMOVAL
     # ════════════════════════════════════════════════════════════════════════
 
     logger.info("-"*80)
@@ -141,6 +138,35 @@ def clean_data(
             if len(mode_val) > 0:
                 df_clean[col].fillna(mode_val[0], inplace=True)
 
+    # ════════════════════════════════════════════════════════════════════════
+    # ✨ PATH B: FEATURE SCALING (NEW)
+    # ════════════════════════════════════════════════════════════════════════
+
+    logger.info("-"*80)
+    logger.info("📈 FEATURE SCALING (PATH B)")
+    logger.info("="*80)
+
+    # Get numeric columns for scaling
+    numeric_cols_to_scale = df_clean.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    logger.info(f"Scaling {len(numeric_cols_to_scale)} numeric columns with StandardScaler...")
+
+    if len(numeric_cols_to_scale) > 0:
+        scaler = StandardScaler()
+        df_clean[numeric_cols_to_scale] = scaler.fit_transform(df_clean[numeric_cols_to_scale])
+
+        logger.info(f"✅ Feature scaling applied to:")
+        for i, col in enumerate(numeric_cols_to_scale[:10]):  # Show first 10
+            logger.info(f"   {i+1}. {col}")
+
+        if len(numeric_cols_to_scale) > 10:
+            logger.info(f"   ... and {len(numeric_cols_to_scale) - 10} more columns")
+
+        logger.info("✅ All numeric features normalized to mean=0, std=1")
+        report["features_scaled"] = numeric_cols_to_scale
+        report["actions"].append(f"Scaled {len(numeric_cols_to_scale)} numeric features with StandardScaler")
+
+    logger.info("="*80)
+
     report["final_shape"] = df_clean.shape
     report["rows_removed"] = df.shape[0] - df_clean.shape[0]
 
@@ -150,7 +176,7 @@ def clean_data(
     return df_clean, report
 
 def create_pipeline() -> Pipeline:
-    """Create data cleaning pipeline."""
+    """Create data cleaning pipeline with PATH B scaling."""
     return Pipeline(
         [
             node(

@@ -259,6 +259,150 @@ def phase4_train_all_algorithms(
     return trained_models, results_df
 
 # ============================================================================
+# PATH B: ROC CURVES & CONFUSION MATRIX VISUALIZATION (NEW)
+# ============================================================================
+
+from sklearn.metrics import roc_curve, auc, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+def phase4_generate_roc_curves_and_confusion_matrices(
+        trained_models: Dict[str, object],
+        results_df: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        problem_type: str,
+        top_n: int = 5
+) -> Dict[str, Any]:
+    """
+    Generate ROC curves and confusion matrices for top models (PATH B)
+    """
+
+    log.info("="*80)
+    log.info("📈 GENERATING ROC CURVES & CONFUSION MATRICES (PATH B)")
+    log.info("="*80)
+
+    # Handle DataFrame inputs
+    if isinstance(y_test, pd.DataFrame):
+        y_test = y_test.iloc[:, 0]
+
+    output_dir = "data/07_model_output/path_b_visualizations"
+    os.makedirs(output_dir, exist_ok=True)
+
+    analysis_results = {
+        'roc_curves_generated': False,
+        'confusion_matrices_generated': False,
+        'top_models_analyzed': []
+    }
+
+    if problem_type == 'classification':
+        log.info("🎯 Generating visualizations for classification...")
+
+        # Get top 5 models
+        top_models = results_df.nlargest(top_n, 'Test_Score')[['Algorithm', 'Test_Score']].values
+        top_model_names = [name for name, score in top_models]
+
+        log.info(f"Analyzing top {top_n} models:")
+        for name, score in top_models:
+            log.info(f"  - {name}: {score:.4f}")
+
+        # Create figure for ROC curves
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        for model_name in top_model_names:
+            if model_name not in trained_models:
+                continue
+
+            model = trained_models[model_name]
+
+            # Skip if model doesn't support predict_proba
+            if not hasattr(model, 'predict_proba'):
+                log.warning(f"⚠️  {model_name} doesn't support predict_proba, skipping ROC")
+                continue
+
+            try:
+                # Get probability predictions
+                y_pred_proba = model.predict_proba(X_test)[:, 1]
+
+                # Calculate ROC curve
+                fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+                roc_auc = auc(fpr, tpr)
+
+                # Plot ROC curve
+                ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:.4f})', linewidth=2)
+
+                log.info(f"  ✅ {model_name}: ROC-AUC = {roc_auc:.4f}")
+                analysis_results['top_models_analyzed'].append({
+                    'model': model_name,
+                    'roc_auc': float(roc_auc)
+                })
+
+            except Exception as e:
+                log.warning(f"  ❌ {model_name}: {str(e)}")
+                continue
+
+        # Plot random classifier line
+        ax.plot([0, 1], [0, 1], 'k--', label='Random Classifier (AUC = 0.5)', linewidth=2)
+
+        # Format plot
+        ax.set_xlabel('False Positive Rate', fontsize=12)
+        ax.set_ylabel('True Positive Rate', fontsize=12)
+        ax.set_title('ROC Curves - Top 5 Models (PATH B)', fontsize=14, fontweight='bold')
+        ax.legend(loc='lower right', fontsize=10)
+        ax.grid(True, alpha=0.3)
+
+        # Save figure
+        roc_path = f"{output_dir}/roc_curves_top_{top_n}.png"
+        plt.savefig(roc_path, dpi=300, bbox_inches='tight')
+        log.info(f"✅ ROC curves saved: {roc_path}")
+        plt.close()
+        analysis_results['roc_curves_generated'] = True
+        analysis_results['roc_curve_path'] = roc_path
+
+        # Generate confusion matrices for top 3 models
+        log.info("\n📊 Generating Confusion Matrices...")
+        fig, axes = plt.subplots(1, min(3, len(top_model_names)), figsize=(15, 4))
+        if min(3, len(top_model_names)) == 1:
+            axes = [axes]
+
+        for idx, model_name in enumerate(top_model_names[:3]):
+            if model_name not in trained_models or idx >= len(axes):
+                continue
+
+            model = trained_models[model_name]
+            y_pred = model.predict(X_test)
+
+            # Compute confusion matrix
+            cm = confusion_matrix(y_test, y_pred)
+
+            # Plot
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[idx],
+                        cbar=False, annot_kws={'size': 12})
+            axes[idx].set_title(f'{model_name}\n(Accuracy: {results_df[results_df["Algorithm"]==model_name]["Test_Score"].values[0]:.4f})',
+                                fontsize=10, fontweight='bold')
+            axes[idx].set_ylabel('True Label', fontsize=10)
+            axes[idx].set_xlabel('Predicted Label', fontsize=10)
+
+            log.info(f"  ✅ {model_name} confusion matrix generated")
+
+        plt.tight_layout()
+        cm_path = f"{output_dir}/confusion_matrices_top_3.png"
+        plt.savefig(cm_path, dpi=300, bbox_inches='tight')
+        log.info(f"✅ Confusion matrices saved: {cm_path}")
+        plt.close()
+        analysis_results['confusion_matrices_generated'] = True
+        analysis_results['confusion_matrix_path'] = cm_path
+
+    else:
+        log.info("ℹ️  ROC curves only available for classification problems")
+        analysis_results['message'] = "Regression detected - ROC curves not applicable"
+
+    log.info("="*80)
+
+    return analysis_results
+
+# ============================================================================
 # PATH A: ENSEMBLE VOTING FROM TOP 5 MODELS (NEW FUNCTION)
 # ============================================================================
 
@@ -489,6 +633,13 @@ def create_pipeline(**kwargs) -> Pipeline:
             inputs=["phase4_trained_models", "phase4_results", "X_train_selected", "y_train", "X_test_selected", "y_test", "problem_type"],
             outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble"],
             name="phase4_ensemble_voting"
+        ),
+
+        node(
+            func=phase4_generate_report,
+            inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "problem_type"],
+            outputs=["phase4_report", "phase4_summary"],
+            name="phase4_generate_report"
         ),
 
         node(
