@@ -1,5 +1,8 @@
 # ════════════════════════════════════════════════════════════════════════════
-# Kedro Data Catalog for PERFECT Phase 2 - CORRECT naming: CSVDataset
+# COMPLETE DATA CATALOG - PHASES 1, 2, 3 & 4 (100% INTEGRATED)
+# ════════════════════════════════════════════════════════════════════════════
+# PRESERVES ALL EXISTING PHASE 1 & 2 ENTRIES
+# ADDS COMPLETE PHASE 3 & 4 ENTRIES
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,7 +67,7 @@ y_test:
   save_args:
     index: false
 
-# Split configuration (CRITICAL for Gap 1: Data Leakage Prevention)
+# Split configuration (CRITICAL for Data Leakage Prevention)
 train_test_split_config:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/train_test_split_config.pkl
@@ -122,7 +125,7 @@ X_test_engineered:
     index: false
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 2: FEATURE ENGINEERING (Fitted Preprocessors - Gap 1 Critical!)
+# PHASE 2: FEATURE ENGINEERING (Fitted Preprocessors)
 # ─────────────────────────────────────────────────────────────────────────────
 
 imputer_config:
@@ -138,7 +141,7 @@ encoder_config:
   filepath: data/06_models/encoder.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 2: FEATURE SELECTION (Gap 2 & Gap 5)
+# PHASE 2: FEATURE SELECTION (Outputs)
 # ─────────────────────────────────────────────────────────────────────────────
 
 X_train_selected:
@@ -164,7 +167,7 @@ selected_features:
   filepath: data/08_reporting/selected_features.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PROBLEM TYPE DETECTION (Gap 2)
+# PHASE 2: PROBLEM TYPE DETECTION
 # ─────────────────────────────────────────────────────────────────────────────
 
 problem_type_result:
@@ -172,9 +175,90 @@ problem_type_result:
   filepath: data/08_reporting/problem_type_result.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 1 PIPELINE: Reporting
+# PHASE 1: DATA SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 
 data_summary:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/data_summary.pkl
+
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 3: MODEL TRAINING & EVALUATION (NEW)
+# ════════════════════════════════════════════════════════════════════════════
+
+# Problem type detection
+problem_type:
+  type: text.text_dataset.TextDataset
+  filepath: data/06_models/problem_type.txt
+
+# Baseline models
+baseline_model:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/baseline_model.pkl
+
+baseline_metrics:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/baseline_metrics.pkl
+
+# Best tuned model
+best_model:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/best_model.pkl
+
+tuning_info:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/tuning_info.pkl
+
+# Model evaluation
+model_evaluation:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/model_evaluation.pkl
+
+phase3_save_status:
+  type: text.text_dataset.TextDataset
+  filepath: data/06_models/phase3_save_status.txt
+
+# Predictions
+phase3_predictions:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/07_model_output/phase3_predictions.csv
+  save_args:
+    index: false
+
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 4: COMPLETE ML ALGORITHMS (50+) (NEW)
+# ════════════════════════════════════════════════════════════════════════════
+
+# All trained models
+phase4_trained_models:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/phase4/all_trained_models.pkl
+
+# Results dataframe (all algorithms ranked)
+phase4_results:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/07_model_output/phase4_results.csv
+  save_args:
+    index: false
+
+# Ranked report
+phase4_report:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/07_model_output/phase4_report.csv
+  save_args:
+    index: false
+
+# Summary statistics
+phase4_summary:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/07_model_output/phase4_summary.pkl
+
+# Best 5 models
+phase4_best_models:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/06_models/phase4/best_models.pkl
+
+# Save status
+phase4_save_status:
+  type: text.text_dataset.TextDataset
+  filepath: data/06_models/phase4/phase4_save_status.txt

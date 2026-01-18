@@ -1,6 +1,7 @@
 # ════════════════════════════════════════════════════════════════════════════
-# PERFECT Phase 2 Parameters Configuration
-# Complete parameter structure matching all pipeline expectations
+# COMPLETE PARAMETERS - PHASES 1, 2, 3 & 4 (100% INTEGRATED)
+# PRESERVES ALL EXISTING PHASE 1 & 2 CONFIGURATION
+# ADDS COMPLETE PHASE 3 & 4 CONFIGURATION
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -10,7 +11,14 @@
 data_path: "data/01_raw/data.csv"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATA PROCESSING (Required by Phase 2 Feature Engineering)
+# TARGET & FEATURES (Required by all phases)
+# ─────────────────────────────────────────────────────────────────────────────
+
+target_column: "Churn"                  # Column to predict (ADJUST TO YOUR DATASET)
+exclude_columns: []                    # Columns to exclude from features
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA PROCESSING (Required by Phase 1 & 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 data_processing:
@@ -20,11 +28,15 @@ data_processing:
   stratify: null                       # Set to target_column for stratified split
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TARGET & FEATURES (Required by all phases)
+# VALIDATION (Phase 1)
 # ─────────────────────────────────────────────────────────────────────────────
 
-target_column: "Churn"                  # Column to predict
-exclude_columns: []                    # Columns to exclude from features
+validation:
+  check_missing: true
+  check_duplicates: true
+  check_data_types: true
+  check_column_names: true
+  missing_threshold: 0.5              # Alert if column has >50% missing
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FEATURE ENGINEERING (Phase 2)
@@ -33,10 +45,10 @@ exclude_columns: []                    # Columns to exclude from features
 feature_engineering:
   polynomial_degree: 2
   include_bias: false
-  max_output_features: 100             # Gap 3: Prevents feature explosion
+  max_output_features: 100             # Prevents feature explosion
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CATEGORICAL HANDLING (Phase 2 - Gap 4)
+# CATEGORICAL HANDLING (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 categorical:
@@ -45,14 +57,14 @@ categorical:
   min_frequency: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SCALING & NORMALIZATION
+# SCALING & NORMALIZATION (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 scaling:
   method: "standard"                   # Options: "standard", "minmax", "robust"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FEATURE SELECTION (Phase 2 - Gap 5: Real Target Importance)
+# FEATURE SELECTION (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 feature_selection:
@@ -61,24 +73,93 @@ feature_selection:
   test_size: 0.2
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PROBLEM TYPE DETECTION (Phase 2 - Gap 2)
+# PROBLEM TYPE DETECTION (Phase 2 & 3)
 # ─────────────────────────────────────────────────────────────────────────────
 
 problem_type:
   auto_detect: true
   override: null                       # Set to "classification" or "regression" to override
 
-# ─────────────────────────────────────────────────────────────────────────────
-# VALIDATION (Phase 1)
-# ─────────────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 3: MODEL TRAINING & EVALUATION (NEW)
+# ════════════════════════════════════════════════════════════════════════════
 
-validation:
-  check_missing: true
-  check_duplicates: true
-  check_data_types: true
+model_training:
+  # Cross-validation folds for hyperparameter tuning
+  cv_folds: 5
+  random_state: 42
+  n_jobs: -1                           # -1 = use all processors
+
+  # Baseline model settings
+  baseline:
+    use_baseline: true                 # Train baseline for comparison
+
+  # Hyperparameter tuning settings
+  hyperparameter_tuning:
+    cv_folds: 5
+    scoring: null                      # null = auto-select based on problem type
+    n_iter_search: 10
+
+  # Evaluation settings
+  evaluation:
+    compute_feature_importance: true
+    log_classification_report: true
+    check_overfitting: true            # Alert if overfit_gap > 0.1
+
+  # Classification hyperparameters
+  classification:
+    n_estimators: [50, 100]
+    max_depth: [5, 10, 15]
+    min_samples_split: [2, 5]
+
+  # Regression hyperparameters
+  regression:
+    n_estimators: [50, 100]
+    learning_rate: [0.01, 0.1]
+    max_depth: [3, 5, 7]
+
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 4: COMPLETE ML ALGORITHMS (50+) (NEW)
+# ════════════════════════════════════════════════════════════════════════════
+
+algorithms:
+  # Total algorithms to train (null = all available)
+  max_algorithms: null
+
+  # Algorithm categories to use
+  use_regression_algorithms: true
+  use_classification_algorithms: true
+
+  # Regression algorithm families
+  regression:
+    linear_models: true                # 8 algorithms
+    tree_based: true                   # 6 algorithms
+    svm: true                          # 3 algorithms
+    specialized: true                  # 3 algorithms
+    xgboost: true                      # 1 algorithm (if installed)
+    lightgbm: true                     # 1 algorithm (if installed)
+    catboost: true                     # 1 algorithm (if installed)
+
+  # Classification algorithm families
+  classification:
+    linear_models: true                # 5 algorithms
+    tree_based: true                   # 6 algorithms
+    svm: true                          # 4 algorithms
+    naive_bayes: true                  # 5 algorithms
+    neighbors: true                    # 1 algorithm
+    ensemble: true                     # 1 algorithm
+    xgboost: true                      # 1 algorithm (if installed)
+    lightgbm: true                     # 1 algorithm (if installed)
+    catboost: true                     # 1 algorithm (if installed)
+
+  # Model selection & reporting
+  n_best_models: 5                    # Number of best models to save separately
+  save_all_models: true               # Save individual model files
+  save_comparison: true               # Save comparison report
+  generate_summary: true              # Generate summary statistics
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LOGGING
+# LOGGING (All phases)
 # ─────────────────────────────────────────────────────────────────────────────
 
 logging:
@@ -86,3 +167,6 @@ logging:
   log_feature_importance: true
   log_problem_type: true
   log_preprocessing: true
+  log_model_comparison: true
+  log_algorithm_performance: true
+  log_level: "INFO"                    # Options: "DEBUG", "INFO", "WARNING", "ERROR"
