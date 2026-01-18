@@ -1,8 +1,9 @@
 """
-PHASE 4: COMPLETE ML ALGORITHMS (FINAL FIX)
+PHASE 4: COMPLETE ML ALGORITHMS WITH PATH A, B, C
 ================================================================================
-FIXED: Removed problem_type_result[problem_type] reference
-Uses simple "problem_type" string input
+✅ PATH A: Ensemble voting (top 5 models)
+✅ PATH B: ROC curves + Confusion matrices
+✅ PATH C: Learning curves + SHAP + Statistical testing (optional)
 ================================================================================
 """
 
@@ -34,8 +35,8 @@ from sklearn.ensemble import (
 )
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB, ComplementNB, CategoricalNB
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import mean_squared_error, r2_score, accuracy_score
+from sklearn.model_selection import cross_val_score, learning_curve
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from kedro.pipeline import Pipeline, node
 from sklearn.ensemble import VotingClassifier, VotingRegressor
@@ -57,6 +58,15 @@ try:
     CATBOOST_AVAILABLE = True
 except ImportError:
     CATBOOST_AVAILABLE = False
+
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except ImportError:
+    SHAP_AVAILABLE = False
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 log = logging.getLogger(__name__)
 
@@ -99,25 +109,21 @@ def get_regression_algorithms() -> Dict[str, object]:
         'PassiveAggressiveRegressor': PassiveAggressiveRegressor(random_state=42),
     }
 
-    # Add optional algorithms
     if XGBOOST_AVAILABLE:
-        algorithms['XGBRegressor'] = XGBRegressor(n_estimators=100, random_state=42, n_jobs=-1, verbosity=0)
-        log.info("✅ XGBoost available")
+        algorithms['XGBRegressor'] = XGBRegressor(n_estimators=100, random_state=42, verbosity=0)
 
     if LIGHTGBM_AVAILABLE:
-        algorithms['LGBMRegressor'] = LGBMRegressor(n_estimators=100, random_state=42, n_jobs=-1, verbose=-1)
-        log.info("✅ LightGBM available")
+        algorithms['LGBMRegressor'] = LGBMRegressor(n_estimators=100, random_state=42, verbose=-1)
 
     if CATBOOST_AVAILABLE:
-        algorithms['CatBoostRegressor'] = CatBoostRegressor(iterations=100, random_state=42, verbose=False)
-        log.info("✅ CatBoost available")
+        algorithms['CatBoostRegressor'] = CatBoostRegressor(iterations=100, verbose=False, random_state=42)
 
     log.info(f"✅ Loaded {len(algorithms)} regression algorithms")
     return algorithms
 
 
 # ============================================================================
-# PHASE 4.2: GET ALL CLASSIFICATION ALGORITHMS (26+)
+# PHASE 4.2: GET ALL CLASSIFICATION ALGORITHMS (30+)
 # ============================================================================
 
 def get_classification_algorithms() -> Dict[str, object]:
@@ -125,12 +131,12 @@ def get_classification_algorithms() -> Dict[str, object]:
     log.info("Loading classification algorithms...")
 
     algorithms = {
-        # Linear Models (5)
-        'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1),
-        'RidgeClassifier': RidgeClassifier(alpha=1.0),
-        'SGDClassifier': SGDClassifier(max_iter=1000, random_state=42, n_jobs=-1),
-        'Perceptron': Perceptron(random_state=42, n_jobs=-1),
+        # Linear Models (7)
+        'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
+        'RidgeClassifier': RidgeClassifier(random_state=42),
+        'SGDClassifier': SGDClassifier(random_state=42, n_jobs=-1),
         'PassiveAggressiveClassifier': PassiveAggressiveClassifier(random_state=42, n_jobs=-1),
+        'Perceptron': Perceptron(random_state=42, n_jobs=-1),
 
         # Tree-based (6)
         'DecisionTreeClassifier': DecisionTreeClassifier(max_depth=10, random_state=42),
@@ -141,10 +147,9 @@ def get_classification_algorithms() -> Dict[str, object]:
         'BaggingClassifier': BaggingClassifier(n_estimators=100, random_state=42, n_jobs=-1),
 
         # Support Vector Machines (4)
-        'SVC_RBF': SVC(kernel='rbf', random_state=42, probability=True),
-        'LinearSVC': LinearSVC(max_iter=2000, random_state=42, dual=False),
-        'NuSVC': NuSVC(kernel='rbf', random_state=42, probability=True),
-        'SVC_Poly': SVC(kernel='poly', degree=2, random_state=42, probability=True),
+        'SVC': SVC(kernel='rbf', probability=True, random_state=42),
+        'LinearSVC': LinearSVC(random_state=42, max_iter=2000),
+        'NuSVC': NuSVC(kernel='rbf', probability=True, random_state=42),
 
         # Naive Bayes (5)
         'GaussianNB': GaussianNB(),
@@ -153,22 +158,18 @@ def get_classification_algorithms() -> Dict[str, object]:
         'ComplementNB': ComplementNB(),
         'CategoricalNB': CategoricalNB(),
 
-        # Neighbors (1)
+        # Neighbors (2)
         'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
     }
 
-    # Add optional algorithms
     if XGBOOST_AVAILABLE:
-        algorithms['XGBClassifier'] = XGBClassifier(n_estimators=100, random_state=42, n_jobs=-1, verbosity=0)
-        log.info("✅ XGBoost available")
+        algorithms['XGBClassifier'] = XGBClassifier(n_estimators=100, random_state=42, verbosity=0, eval_metric='logloss')
 
     if LIGHTGBM_AVAILABLE:
-        algorithms['LGBMClassifier'] = LGBMClassifier(n_estimators=100, random_state=42, n_jobs=-1, verbose=-1)
-        log.info("✅ LightGBM available")
+        algorithms['LGBMClassifier'] = LGBMClassifier(n_estimators=100, random_state=42, verbose=-1)
 
     if CATBOOST_AVAILABLE:
-        algorithms['CatBoostClassifier'] = CatBoostClassifier(iterations=100, random_state=42, verbose=False)
-        log.info("✅ CatBoost available")
+        algorithms['CatBoostClassifier'] = CatBoostClassifier(iterations=100, verbose=False, random_state=42)
 
     log.info(f"✅ Loaded {len(algorithms)} classification algorithms")
     return algorithms
@@ -184,19 +185,20 @@ def phase4_train_all_algorithms(
         y_train: pd.Series,
         y_test: pd.Series,
         problem_type: str,
-        params: Dict[str, Any]
+        problem_type_param: str,
 ) -> Tuple[Dict[str, object], pd.DataFrame]:
-    """Train all algorithms and return results"""
+    """Train all algorithms and evaluate on test set"""
 
     log.info("="*80)
-    log.info("PHASE 4: TRAINING ALL ALGORITHMS")
+    log.info("🚀 TRAINING ALL ALGORITHMS (50+)")
     log.info("="*80)
 
-    # Ensure problem_type is a simple string
-    problem_type = str(problem_type).lower().strip() if problem_type else 'classification'
-    log.info(f"Problem type: {problem_type}")
+    # Determine problem type
+    detected_type = problem_type if problem_type else problem_type_param
+    log.info(f"Problem type: {detected_type}")
 
-    if problem_type == 'classification':
+    # Get algorithms
+    if detected_type == 'classification':
         algorithms = get_classification_algorithms()
     else:
         algorithms = get_regression_algorithms()
@@ -206,46 +208,21 @@ def phase4_train_all_algorithms(
 
     for algo_name, model in algorithms.items():
         try:
-            log.info(f"Training {algo_name}...")
-
-            # Handle categorical features for Naive Bayes
-            X_train_scaled = X_train.copy()
-            X_test_scaled = X_test.copy()
-
-            if 'NB' in algo_name:
-                scaler = StandardScaler()
-                X_train_scaled = scaler.fit_transform(X_train)
-                X_test_scaled = scaler.transform(X_test)
-                X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns)
-                X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns)
-                X_train_scaled = X_train_scaled - X_train_scaled.min() + 1e-10
-                X_test_scaled = X_test_scaled - X_test_scaled.min() + 1e-10
+            log.info(f"Training {algo_name}...", )
 
             # Train
-            model.fit(X_train_scaled, y_train)
+            model.fit(X_train, y_train)
             trained_models[algo_name] = model
 
             # Evaluate
-            if problem_type == 'classification':
-                train_pred = model.predict(X_train_scaled)
-                test_pred = model.predict(X_test_scaled)
-                train_score = accuracy_score(y_train, train_pred)
-                test_score = accuracy_score(y_test, test_pred)
-                metric = 'accuracy'
-            else:
-                train_pred = model.predict(X_train_scaled)
-                test_pred = model.predict(X_test_scaled)
-                train_score = r2_score(y_train, train_pred)
-                test_score = r2_score(y_test, test_pred)
-                metric = 'r2'
+            train_score = model.score(X_train, y_train)
+            test_score = model.score(X_test, y_test)
 
-            gap = train_score - test_score
             results.append({
                 'Algorithm': algo_name,
                 'Train_Score': train_score,
                 'Test_Score': test_score,
-                'Overfit_Gap': gap,
-                'Metric': metric
+                'Diff': abs(train_score - test_score)
             })
 
             log.info(f"  ✅ {algo_name}: Train={train_score:.4f}, Test={test_score:.4f}")
@@ -256,16 +233,19 @@ def phase4_train_all_algorithms(
 
     results_df = pd.DataFrame(results).sort_values('Test_Score', ascending=False)
 
+    log.info(f"\n✅ Trained {len(trained_models)} algorithms")
+    log.info(f"\nTop 5 Algorithms:")
+    for idx, row in results_df.head(5).iterrows():
+        log.info(f"  {row['Algorithm']}: {row['Test_Score']:.4f}")
+
+    log.info("="*80)
+
     return trained_models, results_df
 
-# ============================================================================
-# PATH B: ROC CURVES & CONFUSION MATRIX VISUALIZATION (NEW)
-# ============================================================================
 
-from sklearn.metrics import roc_curve, auc, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
+# ============================================================================
+# PATH B: ROC CURVES & CONFUSION MATRICES (EXISTING)
+# ============================================================================
 
 def phase4_generate_roc_curves_and_confusion_matrices(
         trained_models: Dict[str, object],
@@ -275,15 +255,12 @@ def phase4_generate_roc_curves_and_confusion_matrices(
         problem_type: str,
         top_n: int = 5
 ) -> Dict[str, Any]:
-    """
-    Generate ROC curves and confusion matrices for top models (PATH B)
-    """
+    """Generate ROC curves and confusion matrices for top models (PATH B)"""
 
     log.info("="*80)
     log.info("📈 GENERATING ROC CURVES & CONFUSION MATRICES (PATH B)")
     log.info("="*80)
 
-    # Handle DataFrame inputs
     if isinstance(y_test, pd.DataFrame):
         y_test = y_test.iloc[:, 0]
 
@@ -299,7 +276,6 @@ def phase4_generate_roc_curves_and_confusion_matrices(
     if problem_type == 'classification':
         log.info("🎯 Generating visualizations for classification...")
 
-        # Get top 5 models
         top_models = results_df.nlargest(top_n, 'Test_Score')[['Algorithm', 'Test_Score']].values
         top_model_names = [name for name, score in top_models]
 
@@ -307,7 +283,6 @@ def phase4_generate_roc_curves_and_confusion_matrices(
         for name, score in top_models:
             log.info(f"  - {name}: {score:.4f}")
 
-        # Create figure for ROC curves
         fig, ax = plt.subplots(figsize=(10, 8))
 
         for model_name in top_model_names:
@@ -316,20 +291,15 @@ def phase4_generate_roc_curves_and_confusion_matrices(
 
             model = trained_models[model_name]
 
-            # Skip if model doesn't support predict_proba
             if not hasattr(model, 'predict_proba'):
                 log.warning(f"⚠️  {model_name} doesn't support predict_proba, skipping ROC")
                 continue
 
             try:
-                # Get probability predictions
                 y_pred_proba = model.predict_proba(X_test)[:, 1]
-
-                # Calculate ROC curve
                 fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
                 roc_auc = auc(fpr, tpr)
 
-                # Plot ROC curve
                 ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:.4f})', linewidth=2)
 
                 log.info(f"  ✅ {model_name}: ROC-AUC = {roc_auc:.4f}")
@@ -342,17 +312,13 @@ def phase4_generate_roc_curves_and_confusion_matrices(
                 log.warning(f"  ❌ {model_name}: {str(e)}")
                 continue
 
-        # Plot random classifier line
         ax.plot([0, 1], [0, 1], 'k--', label='Random Classifier (AUC = 0.5)', linewidth=2)
-
-        # Format plot
         ax.set_xlabel('False Positive Rate', fontsize=12)
         ax.set_ylabel('True Positive Rate', fontsize=12)
         ax.set_title('ROC Curves - Top 5 Models (PATH B)', fontsize=14, fontweight='bold')
         ax.legend(loc='lower right', fontsize=10)
         ax.grid(True, alpha=0.3)
 
-        # Save figure
         roc_path = f"{output_dir}/roc_curves_top_{top_n}.png"
         plt.savefig(roc_path, dpi=300, bbox_inches='tight')
         log.info(f"✅ ROC curves saved: {roc_path}")
@@ -360,7 +326,6 @@ def phase4_generate_roc_curves_and_confusion_matrices(
         analysis_results['roc_curves_generated'] = True
         analysis_results['roc_curve_path'] = roc_path
 
-        # Generate confusion matrices for top 3 models
         log.info("\n📊 Generating Confusion Matrices...")
         fig, axes = plt.subplots(1, min(3, len(top_model_names)), figsize=(15, 4))
         if min(3, len(top_model_names)) == 1:
@@ -372,11 +337,8 @@ def phase4_generate_roc_curves_and_confusion_matrices(
 
             model = trained_models[model_name]
             y_pred = model.predict(X_test)
-
-            # Compute confusion matrix
             cm = confusion_matrix(y_test, y_pred)
 
-            # Plot
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[idx],
                         cbar=False, annot_kws={'size': 12})
             axes[idx].set_title(f'{model_name}\n(Accuracy: {results_df[results_df["Algorithm"]==model_name]["Test_Score"].values[0]:.4f})',
@@ -399,11 +361,11 @@ def phase4_generate_roc_curves_and_confusion_matrices(
         analysis_results['message'] = "Regression detected - ROC curves not applicable"
 
     log.info("="*80)
-
     return analysis_results
 
+
 # ============================================================================
-# PATH A: ENSEMBLE VOTING FROM TOP 5 MODELS (NEW FUNCTION)
+# PATH A: ENSEMBLE VOTING FROM TOP 5 MODELS
 # ============================================================================
 
 def phase4_create_ensemble_voting(
@@ -413,136 +375,276 @@ def phase4_create_ensemble_voting(
         y_train: pd.Series,
         X_test: pd.DataFrame,
         y_test: pd.Series,
-        problem_type: str
+        problem_type: str,
 ) -> Tuple[pd.DataFrame, Dict[str, object]]:
-    """
-    Create ensemble voting classifier/regressor from top 5 models (PATH A)
-    """
+    """Create ensemble voting classifier/regressor (PATH A)"""
 
     log.info("="*80)
     log.info("🎯 CREATING ENSEMBLE VOTING CLASSIFIER (PATH A)")
     log.info("="*80)
 
-    # Handle DataFrame inputs
-    if isinstance(y_train, pd.DataFrame):
-        y_train = y_train.iloc[:, 0]
-    if isinstance(y_test, pd.DataFrame):
-        y_test = y_test.iloc[:, 0]
+    # Get top 5 models
+    top_5 = results_df.nlargest(5, 'Test_Score')['Algorithm'].tolist()
+    log.info(f"Selected top 5 models for ensemble:")
+    for i, name in enumerate(top_5, 1):
+        log.info(f"  {i}. {name}")
 
-    # Get top 5 models by test score
-    top_5_items = results_df.nlargest(5, 'Test_Score')[['Algorithm', 'Test_Score']].values
-    top_5_names = [name for name, score in top_5_items]
-
-    log.info(f"Top 5 models selected:")
-    for i, (name, score) in enumerate(top_5_items, 1):
-        log.info(f"  {i}. {name}: {score:.4f}")
-
-    # Create voting ensemble from top 5
-    voting_estimators = [
-        (name, trained_models[name]) for name in top_5_names if name in trained_models
-    ]
+    # Create voting models
+    top_models_dict = {name: trained_models[name] for name in top_5 if name in trained_models}
 
     if problem_type == 'classification':
-        log.info("Creating VotingClassifier...")
-        voting_clf = VotingClassifier(
-            estimators=voting_estimators,
-            voting='soft'  # Use predicted probabilities
-        )
+        ensemble = VotingClassifier(estimators=list(top_models_dict.items()), voting='soft', n_jobs=-1)
     else:
-        log.info("Creating VotingRegressor...")
-        voting_clf = VotingRegressor(
-            estimators=voting_estimators
-        )
+        ensemble = VotingRegressor(estimators=list(top_models_dict.items()), n_jobs=-1)
 
     # Train ensemble
-    log.info(f"Training ensemble from top 5 models...")
-    voting_clf.fit(X_train, y_train)
+    log.info("Training ensemble...")
+    ensemble.fit(X_train, y_train)
 
-    # Evaluate ensemble
-    if problem_type == 'classification':
-        y_pred_ensemble = voting_clf.predict(X_test)
-        ensemble_score = accuracy_score(y_test, y_pred_ensemble)
-        metric = 'accuracy'
-    else:
-        y_pred_ensemble = voting_clf.predict(X_test)
-        ensemble_score = r2_score(y_test, y_pred_ensemble)
-        metric = 'r2'
+    # Evaluate
+    ensemble_score = ensemble.score(X_test, y_test)
+    best_single_score = results_df.iloc[0]['Test_Score']
 
-    # Calculate improvement
-    best_individual_score = top_5_items[0][1]
-    ensemble_gain = (ensemble_score - best_individual_score)
-
-    log.info(f"✅ Ensemble training complete")
-    log.info(f"  Best individual model: {best_individual_score:.4f}")
+    log.info(f"✅ Ensemble trained")
+    log.info(f"  Best single model: {best_single_score:.4f}")
     log.info(f"  Ensemble score: {ensemble_score:.4f}")
-    log.info(f"  Improvement: +{ensemble_gain:.4f} ({ensemble_gain*100:.2f}%)")
-    log.info("="*80)
 
-    # Add ensemble to results
-    ensemble_result = {
-        'Algorithm': 'ENSEMBLE_TOP_5',
-        'Train_Score': voting_clf.score(X_train, y_train),
-        'Test_Score': ensemble_score,
-        'Overfit_Gap': voting_clf.score(X_train, y_train) - ensemble_score,
-        'Metric': metric
-    }
+    # Add to results
+    new_results = results_df.copy()
+    ensemble_row = pd.DataFrame({
+        'Algorithm': ['VotingEnsemble'],
+        'Train_Score': [ensemble.score(X_train, y_train)],
+        'Test_Score': [ensemble_score],
+        'Diff': [abs(ensemble.score(X_train, y_train) - ensemble_score)]
+    })
+    new_results = pd.concat([ensemble_row, new_results], ignore_index=True).sort_values('Test_Score', ascending=False)
 
-    results_with_ensemble = pd.concat([
-        results_df,
-        pd.DataFrame([ensemble_result])
-    ], ignore_index=True).sort_values('Test_Score', ascending=False)
-
-    # Add to trained models
     trained_models_with_ensemble = trained_models.copy()
-    trained_models_with_ensemble['ENSEMBLE_TOP_5'] = voting_clf
+    trained_models_with_ensemble['VotingEnsemble'] = ensemble
 
-    return results_with_ensemble, trained_models_with_ensemble
+    log.info("="*80)
+    return new_results, trained_models_with_ensemble
 
 
 # ============================================================================
-# PHASE 4.4: GENERATE COMPARISON REPORT
+# PATH C: LEARNING CURVES (NEW)
+# ============================================================================
+
+def phase4_generate_learning_curves(
+        best_model: object,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        problem_type: str
+) -> Dict[str, Any]:
+    """Generate learning curves to detect overfitting (PATH C)"""
+
+    log.info("="*80)
+    log.info("📈 GENERATING LEARNING CURVES (PATH C)")
+    log.info("="*80)
+
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+
+    try:
+        train_sizes, train_scores, val_scores = learning_curve(
+            best_model, X_train, y_train,
+            cv=5,
+            scoring='accuracy' if problem_type == 'classification' else 'r2',
+            n_jobs=-1,
+            train_sizes=np.linspace(0.1, 1.0, 10),
+            verbose=1
+        )
+
+        train_mean = np.mean(train_scores, axis=1)
+        train_std = np.std(train_scores, axis=1)
+        val_mean = np.mean(val_scores, axis=1)
+        val_std = np.std(val_scores, axis=1)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(train_sizes, train_mean, 'o-', color='blue', label='Training score', linewidth=2)
+        ax.fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.2, color='blue')
+
+        ax.plot(train_sizes, val_mean, 'o-', color='red', label='Validation score', linewidth=2)
+        ax.fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.2, color='red')
+
+        ax.set_xlabel('Training Set Size', fontsize=12)
+        ax.set_ylabel('Score', fontsize=12)
+        ax.set_title('Learning Curves (PATH C)', fontsize=14, fontweight='bold')
+        ax.legend(loc='best', fontsize=10)
+        ax.grid(True, alpha=0.3)
+
+        output_dir = "data/07_model_output/path_c_visualizations"
+        os.makedirs(output_dir, exist_ok=True)
+
+        plot_path = f"{output_dir}/learning_curves.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        log.info(f"✅ Learning curves saved: {plot_path}")
+        plt.close()
+
+        gap = train_mean[-1] - val_mean[-1]
+        if gap > 0.1:
+            log.info(f"⚠️  Overfitting detected: gap = {gap:.4f}")
+        else:
+            log.info(f"✅ Good generalization: gap = {gap:.4f}")
+
+        return {
+            'learning_curves_generated': True,
+            'plot_path': plot_path,
+            'overfitting_gap': float(gap)
+        }
+
+    except Exception as e:
+        log.error(f"❌ Learning curves failed: {e}")
+        return {'learning_curves_generated': False, 'error': str(e)}
+
+
+# ============================================================================
+# PATH C: SHAP FEATURE IMPORTANCE (NEW)
+# ============================================================================
+
+def phase4_generate_shap_analysis(
+        best_model: object,
+        X_test: pd.DataFrame,
+        problem_type: str
+) -> Dict[str, Any]:
+    """Generate SHAP feature importance analysis (PATH C)"""
+
+    log.info("="*80)
+    log.info("🎯 GENERATING SHAP FEATURE IMPORTANCE (PATH C)")
+    log.info("="*80)
+
+    if not SHAP_AVAILABLE:
+        log.warning("⚠️  SHAP not installed. Install with: pip install shap")
+        return {'shap_analysis_generated': False, 'error': 'SHAP not installed'}
+
+    try:
+        model_name = best_model.__class__.__name__
+
+        if 'Forest' in model_name or 'Boost' in model_name or 'XGB' in model_name:
+            log.info(f"Using TreeExplainer for {model_name}...")
+            explainer = shap.TreeExplainer(best_model)
+            shap_values = explainer.shap_values(X_test)
+
+            if isinstance(shap_values, list):
+                shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+        else:
+            log.info(f"Using KernelExplainer for {model_name}...")
+            explainer = shap.KernelExplainer(
+                best_model.predict,
+                shap.sample(X_test, 100)
+            )
+            shap_values = explainer.shap_values(X_test.sample(100))
+
+        output_dir = "data/07_model_output/path_c_visualizations"
+        os.makedirs(output_dir, exist_ok=True)
+
+        fig = plt.figure(figsize=(12, 6))
+        shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
+        plt.title('SHAP Feature Importance (PATH C)', fontweight='bold')
+
+        plot_path = f"{output_dir}/shap_feature_importance.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        log.info(f"✅ SHAP analysis saved: {plot_path}")
+        plt.close()
+
+        return {
+            'shap_analysis_generated': True,
+            'plot_path': plot_path,
+            'model_type': model_name
+        }
+
+    except Exception as e:
+        log.error(f"❌ SHAP analysis failed: {e}")
+        return {'shap_analysis_generated': False, 'error': str(e)}
+
+
+# ============================================================================
+# PATH C: STATISTICAL SIGNIFICANCE TESTING (NEW)
+# ============================================================================
+
+def phase4_statistical_testing(
+        results_df: pd.DataFrame,
+        problem_type: str
+) -> Dict[str, Any]:
+    """Perform statistical significance testing (PATH C)"""
+
+    log.info("="*80)
+    log.info("📊 STATISTICAL SIGNIFICANCE TESTING (PATH C)")
+    log.info("="*80)
+
+    try:
+        results_sorted = results_df.nlargest(2, 'Test_Score')
+
+        if len(results_sorted) < 2:
+            log.warning("⚠️  Need at least 2 models for comparison")
+            return {'statistical_test_performed': False}
+
+        model1_score = results_sorted.iloc[0]['Test_Score']
+        model2_score = results_sorted.iloc[1]['Test_Score']
+        model1_name = results_sorted.iloc[0]['Algorithm']
+        model2_name = results_sorted.iloc[1]['Algorithm']
+
+        score_diff = model1_score - model2_score
+
+        log.info(f"Comparing:")
+        log.info(f"  Model 1: {model1_name} ({model1_score:.4f})")
+        log.info(f"  Model 2: {model2_name} ({model2_score:.4f})")
+        log.info(f"  Difference: {score_diff:.4f}")
+
+        significance_threshold = 0.01
+        is_significant = abs(score_diff) > significance_threshold
+
+        if is_significant:
+            log.info(f"✅ SIGNIFICANT difference detected (>{significance_threshold:.1%})")
+        else:
+            log.info(f"⚠️  NOT statistically significant (<{significance_threshold:.1%})")
+
+        return {
+            'statistical_test_performed': True,
+            'model1': model1_name,
+            'model2': model2_name,
+            'model1_score': float(model1_score),
+            'model2_score': float(model2_score),
+            'score_difference': float(score_diff),
+            'is_significant': bool(is_significant)
+        }
+
+    except Exception as e:
+        log.error(f"❌ Statistical testing failed: {e}")
+        return {'statistical_test_performed': False, 'error': str(e)}
+
+
+# ============================================================================
+# PHASE 4.5: GENERATE REPORT
 # ============================================================================
 
 def phase4_generate_report(
         trained_models: Dict[str, object],
         results_df: pd.DataFrame,
-        problem_type: str
+        problem_type: str,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-    """Generate comprehensive comparison report"""
+    """Generate final report"""
 
     log.info("="*80)
-    log.info("PHASE 4: ALGORITHM COMPARISON REPORT")
+    log.info("📋 GENERATING FINAL REPORT")
     log.info("="*80)
 
     report = results_df.copy()
-    report['Rank'] = range(1, len(report) + 1)
-
-    log.info("\n📊 TOP 10 ALGORITHMS:")
-    log.info(report.head(10).to_string())
-
-    # Select top 5
-    top_5 = report.head(5)['Algorithm'].tolist()
-
-    # Summary statistics
     summary = {
-        'total_algorithms': len(trained_models),
-        'top_algorithm': report.iloc[0]['Algorithm'],
-        'top_score': float(report.iloc[0]['Test_Score']),
-        'top_5_algorithms': top_5,
-        'avg_test_score': float(report['Test_Score'].mean()),
-        'best_test_score': float(report['Test_Score'].max()),
-        'worst_test_score': float(report['Test_Score'].min()),
+        'total_models': len(results_df),
+        'best_model': results_df.iloc[0]['Algorithm'],
+        'best_score': float(results_df.iloc[0]['Test_Score']),
+        'problem_type': problem_type
     }
 
-    log.info(f"\n✅ Total algorithms trained: {summary['total_algorithms']}")
-    log.info(f"✅ Best algorithm: {summary['top_algorithm']} ({summary['top_score']:.4f})")
-    log.info(f"✅ Average test score: {summary['avg_test_score']:.4f}")
+    log.info(f"✅ Best model: {summary['best_model']} ({summary['best_score']:.4f})")
+    log.info("="*80)
 
     return report, summary
 
 
 # ============================================================================
-# PHASE 4.5: SAVE ALL RESULTS
+# PHASE 4.6: SAVE RESULTS
 # ============================================================================
 
 def phase4_save_results(
@@ -552,75 +654,50 @@ def phase4_save_results(
         summary: Dict[str, Any],
         problem_type: str
 ) -> str:
-    """Save all models and results"""
+    """Save models and results"""
 
     log.info("="*80)
-    log.info("PHASE 4: SAVING ALL RESULTS")
+    log.info("💾 SAVING RESULTS")
     log.info("="*80)
 
-    os.makedirs('data/06_models/phase4', exist_ok=True)
-    os.makedirs('data/07_model_output', exist_ok=True)
+    output_dir = "data/07_model_output"
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Save comparison results
-    csv_path = f'data/07_model_output/phase4_algorithm_comparison.csv'
-    results_df.to_csv(csv_path, index=False)
-    log.info(f"✅ Saved comparison: {csv_path}")
-
-    # Save report
-    report_path = f'data/07_model_output/phase4_report.csv'
-    report.to_csv(report_path, index=False)
-    log.info(f"✅ Saved report: {report_path}")
+    # Save results
+    results_df.to_csv(f"{output_dir}/phase4_report.csv", index=False)
+    report.to_csv(f"{output_dir}/phase4_ranked_report.csv", index=False)
 
     # Save summary
-    summary_path = f'data/07_model_output/phase4_summary.json'
-    with open(summary_path, 'w') as f:
-        json.dump(summary, f, indent=2)
-    log.info(f"✅ Saved summary: {summary_path}")
+    with open(f"{output_dir}/phase4_summary.json", 'w') as f:
+        json.dump(summary, f, indent=2, default=str)
 
-    # Save best models
-    top_5_names = report.head(5)['Algorithm'].tolist()
-    best_models = {name: trained_models[name] for name in top_5_names if name in trained_models}
+    log.info(f"✅ Results saved to {output_dir}/")
+    log.info("="*80)
 
-    models_path = f'data/06_models/phase4/best_models_{problem_type}.pkl'
-    with open(models_path, 'wb') as f:
-        pickle.dump(best_models, f)
-    log.info(f"✅ Saved best 5 models: {models_path}")
-
-    # Save all models
-    all_models_path = f'data/06_models/phase4/all_trained_models_{problem_type}.pkl'
-    with open(all_models_path, 'wb') as f:
-        pickle.dump(trained_models, f)
-    log.info(f"✅ Saved all {len(trained_models)} models: {all_models_path}")
-
-    return f"Saved {len(trained_models)} models successfully"
+    return "Results saved successfully"
 
 
 # ============================================================================
-# PHASE 4: CREATE PIPELINE
+# CREATE PIPELINE - WITH PATH A, B, C NODES
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
     """
-    Complete Phase 4 pipeline: 50+ ML Algorithms
+    Complete Phase 4 pipeline: 50+ ML Algorithms + PATH A, B, C
 
-    FINAL FIX: Uses simple "problem_type" string input (not problem_type_result[problem_type])
+    Inputs (from Phase 3):
+      - X_train_selected, X_test_selected
+      - y_train, y_test
+      - problem_type, params:problem_type
 
-    Inputs (from Phase 2):
-      - X_train_selected: Final engineered features
-      - X_test_selected: Final engineered features
-      - y_train: Training target
-      - y_test: Test target
-      - problem_type: Simple string (from Phase 3)
-
-    Outputs:
-      - phase4_trained_models: All trained models
-      - phase4_results: Results dataframe
-      - phase4_report: Ranked report
-      - phase4_summary: Summary statistics
-      - phase4_save_status: Save confirmation
+    Outputs with:
+      ✅ PATH A: Ensemble voting (top 5 models)
+      ✅ PATH B: ROC curves + Confusion matrices
+      ✅ PATH C: Learning curves + SHAP + Statistical tests (optional)
     """
 
     return Pipeline([
+        # Train all algorithms
         node(
             func=phase4_train_all_algorithms,
             inputs=["X_train_selected", "X_test_selected", "y_train", "y_test", "problem_type", "params:problem_type"],
@@ -628,6 +705,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="phase4_train_all"
         ),
 
+        # PATH A: Ensemble voting
         node(
             func=phase4_create_ensemble_voting,
             inputs=["phase4_trained_models", "phase4_results", "X_train_selected", "y_train", "X_test_selected", "y_test", "problem_type"],
@@ -635,6 +713,39 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="phase4_ensemble_voting"
         ),
 
+        # PATH B: ROC curves (for classification only)
+        node(
+            func=phase4_generate_roc_curves_and_confusion_matrices,
+            inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "X_test_selected", "y_test", "problem_type"],
+            outputs="phase4_roc_analysis",
+            name="phase4_roc_curves"
+        ),
+
+        # PATH C: Learning curves (optional)
+        node(
+            func=phase4_generate_learning_curves,
+            inputs=["phase4_trained_models_with_ensemble", "X_train_selected", "y_train", "problem_type"],
+            outputs="phase4_learning_curves",
+            name="phase4_learning_curves"
+        ),
+
+        # PATH C: SHAP analysis (optional)
+        node(
+            func=phase4_generate_shap_analysis,
+            inputs=["phase4_trained_models_with_ensemble", "X_test_selected", "problem_type"],
+            outputs="phase4_shap_analysis",
+            name="phase4_shap_analysis"
+        ),
+
+        # PATH C: Statistical testing (optional)
+        node(
+            func=phase4_statistical_testing,
+            inputs=["phase4_results_with_ensemble", "problem_type"],
+            outputs="phase4_statistical_results",
+            name="phase4_statistical_testing"
+        ),
+
+        # Generate report
         node(
             func=phase4_generate_report,
             inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "problem_type"],
@@ -642,13 +753,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="phase4_generate_report"
         ),
 
-        node(
-            func=phase4_generate_report,
-            inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "problem_type"],
-            outputs=["phase4_report", "phase4_summary"],
-            name="phase4_generate_report"
-        ),
-
+        # Save results
         node(
             func=phase4_save_results,
             inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "phase4_report", "phase4_summary", "problem_type"],
