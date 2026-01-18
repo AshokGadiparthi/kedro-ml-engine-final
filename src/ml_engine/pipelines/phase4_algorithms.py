@@ -116,13 +116,16 @@ def get_regression_algorithms() -> Dict[str, object]:
 
 
 # ============================================================================
-# PHASE 4.2: GET ALL CLASSIFICATION ALGORITHMS (30+)
+# CORRECTED FUNCTION FOR phase4_algorithms.py
+# Replace the get_classification_algorithms() function with this version
+# This fixes the syntax error and includes OPTIONS B & D
 # ============================================================================
 
 def get_classification_algorithms() -> Dict[str, object]:
-    """Get all classification algorithms"""
+    """Get all classification algorithms with OPTIONS B & D"""
     log.info("Loading classification algorithms...")
 
+    # PART 1: Base algorithms (unchanged)
     algorithms = {
         'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
         'RidgeClassifier': RidgeClassifier(random_state=42),
@@ -130,12 +133,12 @@ def get_classification_algorithms() -> Dict[str, object]:
         'PassiveAggressiveClassifier': PassiveAggressiveClassifier(random_state=42, n_jobs=-1),
         'Perceptron': Perceptron(random_state=42, n_jobs=-1),
         'DecisionTreeClassifier': DecisionTreeClassifier(max_depth=10, random_state=42),
-        'RandomForestClassifier': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
+        'RandomForestClassifier': RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1),
         'ExtraTreesClassifier': ExtraTreesClassifier(n_estimators=100, random_state=42, n_jobs=-1),
         'GradientBoostingClassifier': GradientBoostingClassifier(n_estimators=100, random_state=42),
         'AdaBoostClassifier': AdaBoostClassifier(n_estimators=100, random_state=42),
         'BaggingClassifier': BaggingClassifier(n_estimators=100, random_state=42, n_jobs=-1),
-        'SVC': SVC(kernel='rbf', probability=True, random_state=42),
+        'SVC': SVC(kernel='rbf', probability=True, class_weight='balanced', random_state=42),
         'LinearSVC': LinearSVC(random_state=42, max_iter=2000),
         'NuSVC': NuSVC(kernel='rbf', probability=True, random_state=42),
         'GaussianNB': GaussianNB(),
@@ -146,6 +149,72 @@ def get_classification_algorithms() -> Dict[str, object]:
         'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
     }
 
+    # ============================================================
+    # OPTION B: ADVANCED ALGORITHMS (MOVED OUTSIDE DICT)
+    # ============================================================
+
+    # XGBoost Classifier
+    try:
+        from xgboost import XGBClassifier
+        algorithms['XGBClassifier'] = XGBClassifier(
+            n_estimators=100,
+            random_state=42,
+            verbosity=0,
+            eval_metric='logloss',
+            tree_method='hist'
+        )
+        log.info("✅ XGBClassifier loaded")
+    except ImportError:
+        log.warning("⚠️ XGBoost not installed")
+
+    # LightGBM Classifier
+    try:
+        from lightgbm import LGBMClassifier
+        algorithms['LGBMClassifier'] = LGBMClassifier(
+            n_estimators=100,
+            random_state=42,
+            verbose=-1,
+            num_leaves=31,
+            learning_rate=0.05
+        )
+        log.info("✅ LGBMClassifier loaded")
+    except ImportError:
+        log.warning("⚠️ LightGBM not installed")
+
+    # CatBoost Classifier
+    try:
+        from catboost import CatBoostClassifier
+        algorithms['CatBoostClassifier'] = CatBoostClassifier(
+            iterations=100,
+            verbose=False,
+            random_state=42,
+            learning_rate=0.1
+        )
+        log.info("✅ CatBoostClassifier loaded")
+    except ImportError:
+        log.warning("⚠️ CatBoost not installed")
+
+    # Stacking Classifier with OPTION D class weighting
+    try:
+        from sklearn.ensemble import StackingClassifier
+        from sklearn.linear_model import LogisticRegression
+
+        stack_estimators = [
+            ('rf', RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1)),
+            ('gb', GradientBoostingClassifier(n_estimators=100, random_state=42)),
+            ('svc', SVC(kernel='rbf', probability=True, class_weight='balanced', random_state=42))
+        ]
+        algorithms['StackingClassifier'] = StackingClassifier(
+            estimators=stack_estimators,
+            final_estimator=LogisticRegression(max_iter=1000),
+            cv=5,
+            n_jobs=-1
+        )
+        log.info("✅ StackingClassifier loaded")
+    except Exception as e:
+        log.warning(f"⚠️ StackingClassifier failed: {e}")
+
+    # Fallback loading for module-level availability checks
     if XGBOOST_AVAILABLE:
         algorithms['XGBClassifier'] = XGBClassifier(n_estimators=100, random_state=42, verbosity=0, eval_metric='logloss')
 

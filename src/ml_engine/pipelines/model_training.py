@@ -36,21 +36,28 @@ log = logging.getLogger(__name__)
 def scale_features(
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
+        y_train: pd.Series,
         scaling_method: str = "standard"
-) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, object]]:
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, Dict[str, object]]:
     """
     Scale numeric features using StandardScaler or RobustScaler (PATH B)
+    WITH SMOTE for class imbalance handling (OPTION D)
 
     Args:
         X_train: Training features
         X_test: Test features
+        y_train: Training labels (for SMOTE)
         scaling_method: "standard" (StandardScaler) or "robust" (RobustScaler)
 
     Returns:
-        Scaled X_train, scaled X_test, scaler objects dict
+        Scaled X_train, scaled X_test, balanced y_train, scaler objects dict
     """
     log.info("="*80)
-    log.info("🔄 PHASE 3.0: FEATURE SCALING (PATH B)")
+    log.info("🔄 PHASE 3.0: FEATURE SCALING (PATH B) + SMOTE (OPTION D)")
+
+    # Handle DataFrame input
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
     log.info("="*80)
 
     # Get numeric columns
@@ -84,9 +91,55 @@ def scale_features(
         log.info(f"   Train shape: {X_train_scaled.shape}")
         log.info(f"   Test shape: {X_test_scaled.shape}")
 
+    # ============================================================================
+    # OPTION D: HANDLE CLASS IMBALANCE WITH SMOTE
+    # ============================================================================
+    log.info("\n" + "="*80)
+    log.info("🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE")
     log.info("="*80)
 
-    return X_train_scaled, X_test_scaled, scalers
+    try:
+        from imblearn.over_sampling import SMOTE
+
+        # Check if classification problem
+        n_unique = y_train.nunique()
+        if n_unique <= 10:  # Only for classification
+            log.info(f"Detected classification problem ({n_unique} classes)")
+
+            # Check for imbalance
+            class_dist = y_train.value_counts()
+            log.info(f"Before SMOTE:")
+            for cls, cnt in class_dist.items():
+                log.info(f"   Class {cls}: {cnt} samples ({cnt/len(y_train)*100:.1f}%)")
+
+            # Apply SMOTE
+            log.info(f"\nApplying SMOTE to balance classes...")
+            smote = SMOTE(random_state=42, n_jobs=-1, k_neighbors=5)
+            X_train_smote, y_train_smote = smote.fit_resample(X_train_scaled, y_train)
+
+            # Convert back to DataFrame
+            X_train_scaled = pd.DataFrame(X_train_smote, columns=X_train_scaled.columns)
+            y_train = pd.Series(y_train_smote, name=y_train.name)
+
+            log.info(f"After SMOTE:")
+            class_dist_after = pd.Series(y_train_smote).value_counts()
+            for cls, cnt in class_dist_after.items():
+                log.info(f"   Class {cls}: {cnt} samples ({cnt/len(y_train_smote)*100:.1f}%)")
+
+            log.info(f"✅ Classes balanced with SMOTE!")
+            scalers['smote_applied'] = True
+        else:
+            log.info(f"Regression problem ({n_unique} unique values) - SMOTE skipped")
+            scalers['smote_applied'] = False
+
+    except ImportError:
+        log.warning("⚠️  imbalanced-learn not installed - SMOTE skipped")
+        log.warning("   To enable SMOTE: pip install imbalanced-learn --break-system-packages")
+        scalers['smote_applied'] = False
+
+    log.info("="*80)
+
+    return X_train_scaled, X_test_scaled, y_train, scalers
 
 
 # ============================================================================
@@ -182,12 +235,12 @@ def hyperparameter_tuning(
 
         # OPTIMIZED: Same parameters, but RandomizedSearchCV will sample randomly
         param_dist = {
-            'n_estimators': [50, 100, 150, 200],
+            'n_estimators': [50, 100, 150, 200, 300, 500],  # More options
             'max_depth': [5, 10, 15, 20],
             'min_samples_split': [2, 5, 10],
             'min_samples_leaf': [1, 2, 4],
-            'max_features': ['sqrt', 'log2'],
-            'bootstrap': [True]
+            'max_features': ['sqrt', 'log2', None],  # ADD THIS
+            'bootstrap': [True, False],               # ADD THIS
         }
 
         log.info("🔧 Parameter distribution:")
@@ -197,9 +250,9 @@ def hyperparameter_tuning(
         # RandomizedSearchCV instead of GridSearchCV
         search = RandomizedSearchCV(
             model, param_dist,
-            n_iter=30,  # 30 RANDOM combinations (not 216)
+            n_iter=50,  # 30 RANDOM combinations (not 216)
             cv=5,  # 5-fold CV
-            scoring='accuracy',
+            scoring='accuracy' if problem_type == 'classification' else 'r2',
             n_jobs=-1,
             random_state=42,
             verbose=1
@@ -504,21 +557,21 @@ def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline([
         node(
             func=scale_features,
-            inputs=["X_train_selected", "X_test_selected"],
-            outputs=["X_train_scaled", "X_test_scaled", "scalers"],
+            inputs=["X_train_selected", "X_test_selected", "y_train"],
+            outputs=["X_train_scaled", "X_test_scaled", "y_train_balanced", "scalers"],
             name="phase3_scale_features"
         ),
 
         node(
             func=train_baseline_model,
-            inputs=["X_train_scaled", "y_train", "params:problem_type"],
+            inputs=["X_train_scaled", "y_train_balanced", "params:problem_type"],
             outputs=["baseline_model", "baseline_metrics", "problem_type"],
             name="phase3_train_baseline"
         ),
 
         node(
             func=hyperparameter_tuning,
-            inputs=["X_train_scaled", "y_train", "problem_type", "params:feature_selection"],
+            inputs=["X_train_scaled", "y_train_balanced", "problem_type", "params:feature_selection"],
             outputs=["best_model", "tuning_info"],
             name="phase3_hyperparameter_tuning"
         ),
@@ -532,7 +585,7 @@ def create_pipeline(**kwargs) -> Pipeline:
 
         node(
             func=cross_validation,
-            inputs=["best_model", "X_train_scaled", "y_train", "problem_type"],
+            inputs=["best_model", "X_train_scaled", "y_train_balanced", "problem_type"],
             outputs="cross_validation_results",
             name="phase3_cross_validation"
         ),

@@ -655,6 +655,90 @@ def feature_selection(
 
 
 # ============================================================================
+# OPTION D: HANDLE CLASS IMBALANCE WITH SMOTE
+# ADD THIS FUNCTION TO feature_engineering.py (at the end of the file)
+# ============================================================================
+
+def handle_class_imbalance(
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
+    """
+    Handle class imbalance using SMOTE (Synthetic Minority Over-sampling Technique)
+
+    IMPORTANT: Only apply SMOTE to training data!
+    Test data is left untouched to get unbiased evaluation.
+
+    Args:
+        X_train: Training features
+        X_test: Test features
+        y_train: Training labels
+
+    Returns:
+        (X_train_balanced, X_test_unchanged, y_train_balanced)
+    """
+
+    print(f"\n{'='*80}")
+    print(f"🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE")
+    print(f"{'='*80}")
+
+    # Handle DataFrame input
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+
+    # Check if classification problem
+    n_unique = y_train.nunique()
+
+    if n_unique <= 10:  # Only for classification
+        print(f"\n   Detected classification problem ({n_unique} classes)")
+
+        # Check for class imbalance
+        class_dist = y_train.value_counts().sort_index()
+        print(f"\n   Before SMOTE:")
+        for cls, cnt in class_dist.items():
+            print(f"      Class {cls}: {cnt} samples ({cnt/len(y_train)*100:.1f}%)")
+
+        try:
+            from imblearn.over_sampling import SMOTE
+
+            # Apply SMOTE ONLY to training data
+            print(f"\n   Applying SMOTE to balance classes...")
+            smote = SMOTE(random_state=42, n_jobs=-1, k_neighbors=5)
+            X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+
+            # Convert back to DataFrame
+            X_train_balanced = pd.DataFrame(
+                X_train_smote,
+                columns=X_train.columns,
+                index=range(len(X_train_smote))
+            )
+            y_train_balanced = pd.Series(y_train_smote, name=y_train.name)
+
+            # Display balanced distribution
+            class_dist_after = pd.Series(y_train_smote).value_counts().sort_index()
+            print(f"\n   After SMOTE:")
+            for cls, cnt in class_dist_after.items():
+                print(f"      Class {cls}: {cnt} samples ({cnt/len(y_train_smote)*100:.1f}%)")
+
+            print(f"\n   ✅ Classes balanced with SMOTE!")
+            print(f"{'='*80}\n")
+
+            # Test data is UNCHANGED - return as-is for unbiased evaluation
+            return X_train_balanced, X_test, y_train_balanced
+
+        except ImportError:
+            print(f"\n   ⚠️  imbalanced-learn not installed - SMOTE skipped")
+            print(f"   To enable SMOTE: pip install imbalanced-learn --break-system-packages")
+            print(f"{'='*80}\n")
+            return X_train, X_test, y_train
+    else:
+        print(f"\n   Regression problem ({n_unique} unique values) - SMOTE skipped")
+        print(f"{'='*80}\n")
+        return X_train, X_test, y_train
+
+
+# ============================================================================
 # PIPELINE DEFINITION - ENGINEER FEATURES ONLY
 # ============================================================================
 
