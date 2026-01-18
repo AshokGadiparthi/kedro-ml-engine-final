@@ -1,7 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════
 # COMPLETE PARAMETERS - PHASES 1, 2, 3 & 4 (100% INTEGRATED)
-# PRESERVES ALL EXISTING PHASE 1 & 2 CONFIGURATION
-# ADDS COMPLETE PHASE 3 & 4 CONFIGURATION
+# INCLUDES: ALL EXISTING CONFIGURATION + PERMANENT FEATURE EXPLOSION FIXES
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -38,23 +37,79 @@ validation:
   check_column_names: true
   missing_threshold: 0.5              # Alert if column has >50% missing
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FEATURE ENGINEERING (Phase 2)
-# ─────────────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════════════
+# FEATURE ENGINEERING (Phase 2) - WITH PERMANENT EXPLOSION FIXES
+# ════════════════════════════════════════════════════════════════════════════
+# NEW: Integrated 5 permanent fixes for feature explosion
+# WHAT'S NEW:
+#   • Fix #1: Automatic ID column detection & dropping
+#   • Fix #2: Smart categorical encoding (cardinality-based)
+#   • Fix #3: Controlled polynomial features (safe defaults)
+#   • Fix #4: Variance-based filtering (auto-remove noise)
+#   • Fix #5: Explosion safety validation (hard limits)
+# ════════════════════════════════════════════════════════════════════════════
 
 feature_engineering:
-  polynomial_degree: 2
+
+  # ===== FIX #1: ID COLUMN AUTO-DETECTION =====
+  # Automatically identify and DROP ID columns before encoding
+  # This prevents one-hot encoding of high-cardinality IDs (customerID → 7,000+ features!)
+
+  drop_id_columns: true                    # Enable ID detection & removal
+  id_cardinality_threshold: 0.95           # Consider >95% unique values as ID
+  id_keywords:                             # Keywords to identify ID columns
+    - 'id'
+    - 'uid'
+    - 'customer'
+    - 'user'
+    - 'account'
+    - 'reference'
+
+  # ===== FIX #3: CONTROLLED POLYNOMIAL FEATURES =====
+  # Safe polynomial feature creation with strict limits
+
+  polynomial_degree: 2                     # Max degree (keep ≤ 2, higher = explosion!)
   include_bias: false
-  max_output_features: 100             # Prevents feature explosion
+  polynomial_features: false               # DISABLED by default (enable only if needed)
+  max_polynomial_features: 50              # Hard limit on polynomial output features
+  max_output_features: 100                 # Overall feature engineering limit
+
+  # ===== FIX #4: VARIANCE-BASED FILTERING =====
+  # Automatically remove low-variance (near-constant) features
+
+  variance_threshold: 0.01                 # Remove features with variance < 0.01
+  apply_variance_filter: true              # Enable variance-based filtering
+
+  # ===== FIX #5: EXPLOSION SAFETY VALIDATION =====
+  # Hard limit to prevent feature explosion from going unnoticed
+
+  max_features_allowed: 500                # HARD LIMIT: Raise error if exceeded
+  validate_feature_count: true             # Enable validation
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CATEGORICAL HANDLING (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
+# UPDATED: Works with Fix #2 (Smart Categorical Encoding)
+# ════════════════════════════════════════════════════════════════════════════
+# FIX #2: SMART CATEGORICAL ENCODING
+# Prevents one-hot encoding explosion by using cardinality-based strategy:
+#   ≤10 unique values → one-hot encode (creates N-1 features)
+#   11-50 unique values → label encode (creates 1 feature)
+#   >50 unique values → drop (likely not useful)
+# ════════════════════════════════════════════════════════════════════════════
 
 categorical:
-  encoding_method: "onehot"            # Options: "onehot", "label", "target", "frequency"
+  encoding_method: "smart"             # NEW: "smart" uses cardinality-based strategy
+  # Options: "smart", "onehot", "label", "target", "frequency"
+
+  # Smart encoding configuration (for encoding_method: "smart")
+  max_categories_to_onehot: 10         # One-hot encode only if ≤ this many categories
+  max_categories_to_label: 50          # Label encode if 11-50 unique values
+  max_features_from_encoding: 100      # Hard limit on features from categorical encoding
+
   handle_unknown: "ignore"
   min_frequency: 1
+  drop_first_category: true            # Drop first category to avoid multicollinearity
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCALING & NORMALIZATION (Phase 2)
@@ -62,6 +117,7 @@ categorical:
 
 scaling:
   method: "standard"                   # Options: "standard", "minmax", "robust"
+  scale_numeric_only: true             # Only scale numeric features
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FEATURE SELECTION (Phase 2)
@@ -69,8 +125,10 @@ scaling:
 
 feature_selection:
   method: "importance"                 # Options: "variance", "correlation", "importance", "mutual_info"
-  n_features: 10
+  n_features: 10                       # Select top N features
   test_size: 0.2
+  correlation_threshold: 0.95          # Remove features with correlation > 0.95
+  importance_method: 'tree'            # 'tree' (fast) or 'permutation' (accurate)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PROBLEM TYPE DETECTION (Phase 2 & 3)
@@ -81,7 +139,7 @@ problem_type:
   override: null                       # Set to "classification" or "regression" to override
 
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 3: MODEL TRAINING & EVALUATION (NEW)
+# PHASE 3: MODEL TRAINING & EVALUATION
 # ════════════════════════════════════════════════════════════════════════════
 
 model_training:
@@ -119,7 +177,7 @@ model_training:
     max_depth: [3, 5, 7]
 
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 4: COMPLETE ML ALGORITHMS (50+) (NEW)
+# PHASE 4: COMPLETE ML ALGORITHMS (50+)
 # ════════════════════════════════════════════════════════════════════════════
 
 algorithms:
@@ -170,3 +228,45 @@ logging:
   log_model_comparison: true
   log_algorithm_performance: true
   log_level: "INFO"                    # Options: "DEBUG", "INFO", "WARNING", "ERROR"
+
+# ════════════════════════════════════════════════════════════════════════════
+# SUMMARY OF PERMANENT FEATURE EXPLOSION FIXES
+# ════════════════════════════════════════════════════════════════════════════
+#
+# This configuration includes 5 PERMANENT FIXES:
+#
+# FIX #1: ID Column Auto-Detection
+#   Problem: OneHotEncoding customerID (7,043 unique) → 7,043+ features!
+#   Solution: Auto-detect ID columns by name (id, customer, user, etc.)
+#             and cardinality (>95% unique = ID)
+#   Config: drop_id_columns: true, id_keywords: [...]
+#
+# FIX #2: Smart Categorical Encoding
+#   Problem: One-hot encoding all categoricals → explosion
+#   Solution: Cardinality-based strategy:
+#            ≤10 values → one-hot (creates N-1 features)
+#            11-50 values → label encode (creates 1 feature)
+#            >50 values → drop (not useful)
+#   Config: encoding_method: "smart", max_categories_to_onehot: 10
+#
+# FIX #3: Controlled Polynomial Features
+#   Problem: Polynomial(degree=3) on 21 features → 1,000+ features!
+#   Solution: Disabled by default, max degree 2, strict limits
+#   Config: polynomial_features: false, polynomial_degree: 2,
+#           max_polynomial_features: 50
+#
+# FIX #4: Variance-Based Filtering
+#   Problem: Low-variance features cause noise and overfitting
+#   Solution: Auto-remove near-constant features (variance < 0.01)
+#   Config: variance_threshold: 0.01, apply_variance_filter: true
+#
+# FIX #5: Explosion Safety Validation
+#   Problem: 10,964 features slip through unnoticed
+#   Solution: Hard limit (500 features max), raises error if exceeded
+#   Config: max_features_allowed: 500, validate_feature_count: true
+#
+# EXPECTED BEHAVIOR:
+#   Before: 21 features → 10,964 features (EXPLOSION!)
+#   After:  21 features → 25-50 features (SAFE!)
+#
+# ════════════════════════════════════════════════════════════════════════════
