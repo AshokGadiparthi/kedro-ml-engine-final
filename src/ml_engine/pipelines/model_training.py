@@ -250,7 +250,7 @@ def hyperparameter_tuning(
         # RandomizedSearchCV instead of GridSearchCV
         search = RandomizedSearchCV(
             model, param_dist,
-            n_iter=50,  # 30 RANDOM combinations (not 216)
+            n_iter=10,  # 30 RANDOM combinations (not 216)
             cv=5,  # 5-fold CV
             scoring='accuracy' if problem_type == 'classification' else 'r2',
             n_jobs=-1,
