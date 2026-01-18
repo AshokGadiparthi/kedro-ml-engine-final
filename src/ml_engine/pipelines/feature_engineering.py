@@ -571,12 +571,95 @@ def engineer_features(
     return X_train_filtered, X_test_filtered
 
 
+
+# ============================================================================
+# FEATURE SELECTION FUNCTION
+# ============================================================================
+
+def feature_selection(
+        X_train_engineered: pd.DataFrame,
+        X_test_engineered: pd.DataFrame,
+        y_train: pd.Series,
+        params: Dict[str, Any]
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Feature selection using SelectKBest.
+
+    ⭐ CRITICAL: This outputs BOTH X_train_selected AND X_test_selected
+
+    Args:
+        X_train_engineered: Engineered features
+        X_test_engineered: Engineered test features
+        y_train: Target variable
+        params: Configuration
+
+    Returns:
+        (X_train_selected, X_test_selected)
+    """
+    from sklearn.feature_selection import SelectKBest, f_classif, f_regression
+
+    print(f"\n{'='*80}")
+    print(f"🎯 FEATURE SELECTION NODE")
+    print(f"{'='*80}\n")
+
+    # Handle DataFrame input for y_train
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+
+    # Get parameters
+    n_features = params.get('n_features_to_select', 10)
+
+    # Determine problem type
+    n_unique = y_train.nunique()
+    is_classification = n_unique < 20
+    score_func = f_classif if is_classification else f_regression
+    problem_type = "Classification" if is_classification else "Regression"
+
+    print(f"   Input features: {X_train_engineered.shape[1]}")
+    print(f"   Selecting: {n_features} features")
+    print(f"   Problem type: {problem_type}\n")
+
+    # Create selector
+    k = min(n_features, X_train_engineered.shape[1])
+    selector = SelectKBest(score_func=score_func, k=k)
+
+    # FIT on training data
+    X_train_selected_array = selector.fit_transform(X_train_engineered, y_train)
+    selected_features = X_train_engineered.columns[selector.get_support()].tolist()
+
+    # Create training dataframe
+    X_train_selected = pd.DataFrame(
+        X_train_selected_array,
+        columns=selected_features,
+        index=X_train_engineered.index
+    )
+
+    # TRANSFORM test data with SAME features
+    print(f"   Transforming test data with selected features...")
+    X_test_selected_array = selector.transform(X_test_engineered)
+    X_test_selected = pd.DataFrame(
+        X_test_selected_array,
+        columns=selected_features,
+        index=X_test_engineered.index
+    )
+
+    print(f"\n   ✅ Selected {X_train_selected.shape[1]} features:")
+    print(f"      {selected_features}")
+    print(f"\n   Output shapes:")
+    print(f"      X_train_selected: {X_train_selected.shape}")
+    print(f"      X_test_selected: {X_test_selected.shape}")
+    print(f"{'='*80}\n")
+
+    # Return BOTH train and test
+    return X_train_selected, X_test_selected
+
+
 # ============================================================================
 # PIPELINE DEFINITION - ENGINEER FEATURES ONLY
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Create feature engineering pipeline (engineer_features node only)."""
+    """Create feature engineering pipeline with feature selection."""
     return Pipeline(
         [
             node(
@@ -585,6 +668,13 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs=["X_train_final", "X_test_final"],
                 name="engineer_features",
                 tags="fe",
+            ),
+            node(
+                func=feature_selection,
+                inputs=["X_train_final", "X_test_final", "y_train", "params:feature_selection"],
+                outputs=["X_train_selected", "X_test_selected"],
+                name="feature_selection",
+                tags="fs",
             ),
         ]
     )
@@ -599,4 +689,6 @@ if __name__ == "__main__":
     print("      • Low-variance features (automatic filtering)")
     print("      • Feature explosion validation (safety checks)")
     print("")
-    print("   Note: Feature selection is handled by feature_selection.py pipeline")
+    print("   Includes:")
+    print("      • Feature selection (SelectKBest method)")
+    print("      • Outputs BOTH X_train_selected AND X_test_selected ✨")

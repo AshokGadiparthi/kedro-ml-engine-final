@@ -24,8 +24,6 @@ from ml_engine.pipelines.data_cleaning import create_pipeline as create_data_cle
 # ════════════════════════════════════════════════════════════════════════════
 
 from ml_engine.pipelines.feature_engineering import create_pipeline as create_feature_engineering_pipeline
-from ml_engine.pipelines.feature_selection import create_pipeline as create_feature_selection_pipeline
-
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 3: MODEL TRAINING & EVALUATION (NEW)
 # ════════════════════════════════════════════════════════════════════════════
@@ -78,7 +76,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
     # ════════════════════════════════════════════════════════════════════════
 
     feature_engineering_pipeline = create_feature_engineering_pipeline()
-    feature_selection_pipeline = create_feature_selection_pipeline()
 
     # ════════════════════════════════════════════════════════════════════════
     # PHASE 3: MODEL TRAINING & EVALUATION (NEW)
@@ -111,7 +108,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "data_validation": data_validation_pipeline,
         "data_cleaning": data_cleaning_pipeline,
         "feature_engineering": feature_engineering_pipeline,
-        "feature_selection": feature_selection_pipeline,
 
         # ────────────────────────────────────────────────────────────────────
         # PHASE COMBINATIONS
@@ -124,27 +120,22 @@ def register_pipelines() -> Dict[str, Pipeline]:
                 data_cleaning_pipeline
         ),
 
-        # Phase 2: Feature Engineering
-        "phase2": (
-                feature_engineering_pipeline +
-                feature_selection_pipeline
-        ),
+        # Phase 2: Feature Engineering & Selection (COMBINED)
+        "phase2": feature_engineering_pipeline,
 
         # Phase 1 + 2: Complete Data Processing
         "phase1_2": (
                 data_loading_pipeline +
                 data_validation_pipeline +
                 data_cleaning_pipeline +
-                feature_engineering_pipeline +
-                feature_selection_pipeline
+                feature_engineering_pipeline
         ),
 
         "data_processing": (
                 data_loading_pipeline +
                 data_validation_pipeline +
                 data_cleaning_pipeline +
-                feature_engineering_pipeline +
-                feature_selection_pipeline
+                feature_engineering_pipeline
         ),
 
         # Default pipeline (Phase 1 only)
@@ -169,7 +160,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
                 data_validation_pipeline +
                 data_cleaning_pipeline +
                 feature_engineering_pipeline +
-                feature_selection_pipeline +
                 model_training_pipeline
         )
 
@@ -205,7 +195,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
                 data_validation_pipeline +
                 data_cleaning_pipeline +
                 feature_engineering_pipeline +
-                feature_selection_pipeline +
                 model_training_pipeline +
                 phase4_algorithms_pipeline
         )
@@ -215,7 +204,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
                 data_validation_pipeline +
                 data_cleaning_pipeline +
                 feature_engineering_pipeline +
-                feature_selection_pipeline +
                 model_training_pipeline +
                 phase4_algorithms_pipeline
         )
@@ -225,7 +213,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
                 data_validation_pipeline +
                 data_cleaning_pipeline +
                 feature_engineering_pipeline +
-                feature_selection_pipeline +
                 model_training_pipeline +
                 phase4_algorithms_pipeline
         )
