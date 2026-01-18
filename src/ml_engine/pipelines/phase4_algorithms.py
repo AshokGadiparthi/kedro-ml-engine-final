@@ -1,9 +1,9 @@
 """
-PHASE 4: COMPLETE ML ALGORITHMS WITH PATH A, B, C
+PHASE 4: COMPLETE ML ALGORITHMS WITH PATH A, B, C - FIXED PATH C INPUTS
 ================================================================================
 ✅ PATH A: Ensemble voting (top 5 models)
 ✅ PATH B: ROC curves + Confusion matrices
-✅ PATH C: Learning curves + SHAP + Statistical testing (optional)
+✅ PATH C: Learning curves + SHAP + Statistical testing (NOW FIXED!)
 ================================================================================
 """
 
@@ -80,7 +80,6 @@ def get_regression_algorithms() -> Dict[str, object]:
     log.info("Loading regression algorithms...")
 
     algorithms = {
-        # Linear Models (8)
         'LinearRegression': LinearRegression(),
         'Ridge': Ridge(alpha=1.0),
         'Lasso': Lasso(alpha=0.1),
@@ -89,21 +88,15 @@ def get_regression_algorithms() -> Dict[str, object]:
         'ARDRegression': ARDRegression(),
         'HuberRegressor': HuberRegressor(),
         'Lars': Lars(),
-
-        # Tree-based (6)
         'DecisionTreeRegressor': DecisionTreeRegressor(max_depth=10, random_state=42),
         'RandomForestRegressor': RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
         'ExtraTreesRegressor': ExtraTreesRegressor(n_estimators=100, random_state=42, n_jobs=-1),
         'GradientBoostingRegressor': GradientBoostingRegressor(n_estimators=100, random_state=42),
         'AdaBoostRegressor': AdaBoostRegressor(n_estimators=100, random_state=42),
         'BaggingRegressor': BaggingRegressor(n_estimators=100, random_state=42, n_jobs=-1),
-
-        # Support Vector Machines (3)
         'SVR': SVR(kernel='rbf'),
         'LinearSVR': LinearSVR(random_state=42),
         'NuSVR': NuSVR(kernel='rbf'),
-
-        # Specialized (3)
         'RANSACRegressor': RANSACRegressor(random_state=42),
         'TheilSenRegressor': TheilSenRegressor(random_state=42),
         'PassiveAggressiveRegressor': PassiveAggressiveRegressor(random_state=42),
@@ -131,34 +124,25 @@ def get_classification_algorithms() -> Dict[str, object]:
     log.info("Loading classification algorithms...")
 
     algorithms = {
-        # Linear Models (7)
         'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
         'RidgeClassifier': RidgeClassifier(random_state=42),
         'SGDClassifier': SGDClassifier(random_state=42, n_jobs=-1),
         'PassiveAggressiveClassifier': PassiveAggressiveClassifier(random_state=42, n_jobs=-1),
         'Perceptron': Perceptron(random_state=42, n_jobs=-1),
-
-        # Tree-based (6)
         'DecisionTreeClassifier': DecisionTreeClassifier(max_depth=10, random_state=42),
         'RandomForestClassifier': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
         'ExtraTreesClassifier': ExtraTreesClassifier(n_estimators=100, random_state=42, n_jobs=-1),
         'GradientBoostingClassifier': GradientBoostingClassifier(n_estimators=100, random_state=42),
         'AdaBoostClassifier': AdaBoostClassifier(n_estimators=100, random_state=42),
         'BaggingClassifier': BaggingClassifier(n_estimators=100, random_state=42, n_jobs=-1),
-
-        # Support Vector Machines (4)
         'SVC': SVC(kernel='rbf', probability=True, random_state=42),
         'LinearSVC': LinearSVC(random_state=42, max_iter=2000),
         'NuSVC': NuSVC(kernel='rbf', probability=True, random_state=42),
-
-        # Naive Bayes (5)
         'GaussianNB': GaussianNB(),
         'MultinomialNB': MultinomialNB(),
         'BernoulliNB': BernoulliNB(),
         'ComplementNB': ComplementNB(),
         'CategoricalNB': CategoricalNB(),
-
-        # Neighbors (2)
         'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
     }
 
@@ -193,11 +177,9 @@ def phase4_train_all_algorithms(
     log.info("🚀 TRAINING ALL ALGORITHMS (50+)")
     log.info("="*80)
 
-    # Determine problem type
     detected_type = problem_type if problem_type else problem_type_param
     log.info(f"Problem type: {detected_type}")
 
-    # Get algorithms
     if detected_type == 'classification':
         algorithms = get_classification_algorithms()
     else:
@@ -208,13 +190,10 @@ def phase4_train_all_algorithms(
 
     for algo_name, model in algorithms.items():
         try:
-            log.info(f"Training {algo_name}...", )
-
-            # Train
+            log.info(f"Training {algo_name}...")
             model.fit(X_train, y_train)
             trained_models[algo_name] = model
 
-            # Evaluate
             train_score = model.score(X_train, y_train)
             test_score = model.score(X_test, y_test)
 
@@ -244,7 +223,7 @@ def phase4_train_all_algorithms(
 
 
 # ============================================================================
-# PATH B: ROC CURVES & CONFUSION MATRICES (EXISTING)
+# PATH B: ROC CURVES & CONFUSION MATRICES
 # ============================================================================
 
 def phase4_generate_roc_curves_and_confusion_matrices(
@@ -376,8 +355,11 @@ def phase4_create_ensemble_voting(
         X_test: pd.DataFrame,
         y_test: pd.Series,
         problem_type: str,
-) -> Tuple[pd.DataFrame, Dict[str, object]]:
-    """Create ensemble voting classifier/regressor (PATH A)"""
+) -> Tuple[pd.DataFrame, Dict[str, object], object]:
+    """Create ensemble voting classifier/regressor (PATH A)
+
+    FIXED: Returns best_model as third output for PATH C to use
+    """
 
     log.info("="*80)
     log.info("🎯 CREATING ENSEMBLE VOTING CLASSIFIER (PATH A)")
@@ -388,6 +370,11 @@ def phase4_create_ensemble_voting(
     log.info(f"Selected top 5 models for ensemble:")
     for i, name in enumerate(top_5, 1):
         log.info(f"  {i}. {name}")
+
+    # Get best single model for PATH C
+    best_model_name = results_df.iloc[0]['Algorithm']
+    best_model = trained_models[best_model_name]
+    log.info(f"\n✅ Best model selected for PATH C: {best_model_name}")
 
     # Create voting models
     top_models_dict = {name: trained_models[name] for name in top_5 if name in trained_models}
@@ -419,15 +406,14 @@ def phase4_create_ensemble_voting(
     })
     new_results = pd.concat([ensemble_row, new_results], ignore_index=True).sort_values('Test_Score', ascending=False)
 
-    trained_models_with_ensemble = trained_models.copy()
-    trained_models_with_ensemble['VotingEnsemble'] = ensemble
-
     log.info("="*80)
-    return new_results, trained_models_with_ensemble
+
+    # FIXED: Return best_model as third output
+    return new_results, trained_models, best_model
 
 
 # ============================================================================
-# PATH C: LEARNING CURVES (NEW)
+# PATH C: LEARNING CURVES (FIXED - Now receives best_model)
 # ============================================================================
 
 def phase4_generate_learning_curves(
@@ -499,7 +485,7 @@ def phase4_generate_learning_curves(
 
 
 # ============================================================================
-# PATH C: SHAP FEATURE IMPORTANCE (NEW)
+# PATH C: SHAP FEATURE IMPORTANCE (FIXED - Now receives best_model)
 # ============================================================================
 
 def phase4_generate_shap_analysis(
@@ -559,7 +545,7 @@ def phase4_generate_shap_analysis(
 
 
 # ============================================================================
-# PATH C: STATISTICAL SIGNIFICANCE TESTING (NEW)
+# PATH C: STATISTICAL SIGNIFICANCE TESTING
 # ============================================================================
 
 def phase4_statistical_testing(
@@ -678,22 +664,15 @@ def phase4_save_results(
 
 
 # ============================================================================
-# CREATE PIPELINE - WITH PATH A, B, C NODES
+# CREATE PIPELINE - WITH FIXED PATH C INPUTS
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
     """
-    Complete Phase 4 pipeline: 50+ ML Algorithms + PATH A, B, C
+    Complete Phase 4 pipeline: 50+ ML Algorithms + PATH A, B, C (FIXED!)
 
-    Inputs (from Phase 3):
-      - X_train_selected, X_test_selected
-      - y_train, y_test
-      - problem_type, params:problem_type
-
-    Outputs with:
-      ✅ PATH A: Ensemble voting (top 5 models)
-      ✅ PATH B: ROC curves + Confusion matrices
-      ✅ PATH C: Learning curves + SHAP + Statistical tests (optional)
+    FIXED: phase4_create_ensemble_voting now returns best_model as third output
+    This is used by PATH C functions instead of the dict of all models
     """
 
     return Pipeline([
@@ -705,11 +684,11 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="phase4_train_all"
         ),
 
-        # PATH A: Ensemble voting
+        # PATH A: Ensemble voting (FIXED to return best_model)
         node(
             func=phase4_create_ensemble_voting,
             inputs=["phase4_trained_models", "phase4_results", "X_train_selected", "y_train", "X_test_selected", "y_test", "problem_type"],
-            outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble"],
+            outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble", "best_model"],
             name="phase4_ensemble_voting"
         ),
 
@@ -721,23 +700,23 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="phase4_roc_curves"
         ),
 
-        # PATH C: Learning curves (optional)
+        # PATH C: Learning curves (FIXED - now receives best_model)
         node(
             func=phase4_generate_learning_curves,
-            inputs=["phase4_trained_models_with_ensemble", "X_train_selected", "y_train", "problem_type"],
+            inputs=["best_model", "X_train_selected", "y_train", "problem_type"],
             outputs="phase4_learning_curves",
             name="phase4_learning_curves"
         ),
 
-        # PATH C: SHAP analysis (optional)
+        # PATH C: SHAP analysis (FIXED - now receives best_model)
         node(
             func=phase4_generate_shap_analysis,
-            inputs=["phase4_trained_models_with_ensemble", "X_test_selected", "problem_type"],
+            inputs=["best_model", "X_test_selected", "problem_type"],
             outputs="phase4_shap_analysis",
             name="phase4_shap_analysis"
         ),
 
-        # PATH C: Statistical testing (optional)
+        # PATH C: Statistical testing
         node(
             func=phase4_statistical_testing,
             inputs=["phase4_results_with_ensemble", "problem_type"],
