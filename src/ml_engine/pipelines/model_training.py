@@ -41,7 +41,7 @@ def detect_problem_type_from_target(y_train: pd.Series) -> str:
 
     # Check unique values
     n_unique = y_train.nunique()
-    unique_ratio = n_unique / len(y_train)
+    unique_ratio = float(n_unique / len(y_train))
 
     log.info(f"🔍 Target stats: {n_unique} unique values, {unique_ratio:.2%} ratio")
 
