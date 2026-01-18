@@ -1,5 +1,5 @@
 """
-PERFECT PHASE 2 - FEATURE SELECTION WITH REAL TARGET
+PERFECT PHASE 2 - FEATURE SELECTION WITH REAL TARGET (FIXED)
 =====================================================================
 Replaces: src/ml_engine/pipelines/feature_selection.py
 
@@ -8,6 +8,7 @@ Fixes:
   ✅ Gap 5: Uses REAL target (not fake random target!)
   ✅ Handles correlation-based and importance-based selection
   ✅ Multiple feature importance methods
+  ✅ FIXED: Removed bracket syntax error
 
 Key: Uses ACTUAL target data, not np.random.randint()!
 =====================================================================
@@ -43,13 +44,13 @@ def detect_problem_type(
         Detection result
     """
     print(f"\n{'='*80}")
-    print(f"🔍 PROBLEM TYPE DETECTION (Gap 2 Fix)")
+    print(f"🎯 PROBLEM TYPE DETECTION (Gap 2 Fix)")
     print(f"{'='*80}")
 
     # Check for manual override
     if params.get('problem_type'):
         problem_type = params['problem_type']
-        print(f"\n✓ Manual override: {problem_type.upper()}")
+        print(f"\n✅ Manual override: {problem_type.upper()}")
         return {
             'problem_type': problem_type,
             'method': 'manual_override',
@@ -67,20 +68,20 @@ def detect_problem_type(
 
     # Strategy 1: Data type
     if y.dtype == 'object':
-        print(f"   → Data type is 'object' (strings) → Classification")
+        print(f"   ↓ Data type is 'object' (strings) → Classification")
         problem_type = 'classification'
         confidence = 0.95
     elif y.dtype in ['int64', 'int32']:
         if unique_count <= 10:
-            print(f"   → Integer with ≤10 unique values → Classification")
+            print(f"   ↓ Integer with ≤10 unique values → Classification")
             problem_type = 'classification'
             confidence = 0.8
         else:
-            print(f"   → Integer with >10 unique values → Regression")
+            print(f"   ↓ Integer with >10 unique values → Regression")
             problem_type = 'regression'
             confidence = 0.7
     elif y.dtype in ['float64', 'float32']:
-        print(f"   → Float type → Regression")
+        print(f"   ↓ Float type → Regression")
         problem_type = 'regression'
         confidence = 0.9
     else:
@@ -93,8 +94,8 @@ def detect_problem_type(
             problem_type = 'regression'
             confidence = 0.6
 
-    print(f"\n✓ Detected: {problem_type.upper()}")
-    print(f"✓ Confidence: {confidence*100:.0f}%")
+    print(f"\n✅ Detected: {problem_type.upper()}")
+    print(f"✅ Confidence: {confidence*100:.0f}%")
 
     if confidence < 0.7:
         print(f"\n⚠️  Low confidence - consider manual specification in params")
@@ -115,7 +116,7 @@ def detect_problem_type(
 def calculate_feature_importance_with_real_target(
         X_train: pd.DataFrame,
         y_train: pd.Series,
-        problem_type: str,
+        problem_type_result: Dict[str, Any],
         params: Dict[str, Any]
 ) -> Tuple[Dict[str, float], Dict[str, Any]]:
     """
@@ -126,15 +127,18 @@ def calculate_feature_importance_with_real_target(
     Args:
         X_train: Training features
         y_train: REAL training target
-        problem_type: 'classification' or 'regression'
+        problem_type_result: Dict from detect_problem_type with 'problem_type' key
         params: Configuration
 
     Returns:
         (importance_dict, importance_config)
     """
     print(f"\n{'='*80}")
-    print(f"📊 FEATURE IMPORTANCE WITH REAL TARGET (Gap 5 Fix)")
+    print(f"🏆 FEATURE IMPORTANCE WITH REAL TARGET (Gap 5 Fix)")
     print(f"{'='*80}")
+
+    # FIXED: Extract problem_type from dict (not bracket syntax!)
+    problem_type = problem_type_result["problem_type"]
 
     method = params.get('importance_method', 'tree')
 
@@ -322,7 +326,7 @@ def combine_selected_features(
     Returns:
         Combined selected features
     """
-    print(f"\n🔀 COMBINING FEATURE SELECTION RESULTS")
+    print(f"\n🎁 COMBINING FEATURE SELECTION RESULTS")
 
     # Intersection of both methods (conservative)
     correlation_cols = set(X_train_correlation.columns)
@@ -350,7 +354,7 @@ def log_feature_selection_summary(
         'top_features': list(feature_importance.keys())[:10],
     }
 
-    log.info(f"\n📊 Feature Selection Summary:")
+    log.info(f"\n🏆 Feature Selection Summary:")
     log.info(f"   Final feature count: {summary['final_feature_count']}")
     log.info(f"   Top 5 features: {summary['top_features'][:5]}")
 
@@ -377,10 +381,10 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="detect_problem_type",
                 tags="fs",
             ),
-            # Feature Importance with Real Target (Gap 5)
+            # Feature Importance with Real Target (Gap 5) - FIXED: No bracket syntax!
             node(
                 func=calculate_feature_importance_with_real_target,
-                inputs=["X_train_final", "y_train", "problem_type_result[problem_type]", "params:feature_selection"],
+                inputs=["X_train_final", "y_train", "problem_type_result", "params:feature_selection"],
                 outputs=["feature_importance", "importance_config"],
                 name="calculate_feature_importance_with_real_target",
                 tags="fs",
@@ -425,3 +429,4 @@ if __name__ == "__main__":
     print("✅ Perfect Phase 2 Feature Selection pipeline created!")
     print("   • Uses REAL target for importance (Gap 5 Fix)")
     print("   • Detects problem type robustly (Gap 2 Fix)")
+    print("   • FIXED: Removed bracket syntax error!")
