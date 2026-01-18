@@ -1,10 +1,8 @@
 """
-PHASE 4: COMPLETE ML ALGORITHMS LIBRARY (50+)
+PHASE 4: COMPLETE ML ALGORITHMS (FINAL FIX)
 ================================================================================
-Complete integration with existing Phase 1, 2, 3
-Trains all 50+ algorithms and compares them
-Inputs: X_train_selected, X_test_selected, y_train, y_test (from Phase 2)
-Outputs: All trained models, comparison, best models
+FIXED: Removed problem_type_result[problem_type] reference
+Uses simple "problem_type" string input
 ================================================================================
 """
 
@@ -100,7 +98,7 @@ def get_regression_algorithms() -> Dict[str, object]:
         'PassiveAggressiveRegressor': PassiveAggressiveRegressor(random_state=42),
     }
 
-    # Add XGBoost, LightGBM, CatBoost if available
+    # Add optional algorithms
     if XGBOOST_AVAILABLE:
         algorithms['XGBRegressor'] = XGBRegressor(n_estimators=100, random_state=42, n_jobs=-1, verbosity=0)
         log.info("✅ XGBoost available")
@@ -158,7 +156,7 @@ def get_classification_algorithms() -> Dict[str, object]:
         'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
     }
 
-    # Add XGBoost, LightGBM, CatBoost if available
+    # Add optional algorithms
     if XGBOOST_AVAILABLE:
         algorithms['XGBClassifier'] = XGBClassifier(n_estimators=100, random_state=42, n_jobs=-1, verbosity=0)
         log.info("✅ XGBoost available")
@@ -192,6 +190,10 @@ def phase4_train_all_algorithms(
     log.info("="*80)
     log.info("PHASE 4: TRAINING ALL ALGORITHMS")
     log.info("="*80)
+
+    # Ensure problem_type is a simple string
+    problem_type = str(problem_type).lower().strip() if problem_type else 'classification'
+    log.info(f"Problem type: {problem_type}")
 
     if problem_type == 'classification':
         algorithms = get_classification_algorithms()
@@ -360,12 +362,14 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
     Complete Phase 4 pipeline: 50+ ML Algorithms
 
+    FINAL FIX: Uses simple "problem_type" string input (not problem_type_result[problem_type])
+
     Inputs (from Phase 2):
       - X_train_selected: Final engineered features
       - X_test_selected: Final engineered features
       - y_train: Training target
       - y_test: Test target
-      - problem_type: Classification or Regression
+      - problem_type: Simple string (from Phase 3)
 
     Outputs:
       - phase4_trained_models: All trained models

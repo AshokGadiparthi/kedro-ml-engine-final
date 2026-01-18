@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# ULTRA-FIXED DATA CATALOG - REMOVES ALL problem_type ISSUES
+# FINAL SOLUTION CATALOG - NO BRACKET SYNTAX
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,14 +163,6 @@ selected_features:
   filepath: data/08_reporting/selected_features.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 2: PROBLEM TYPE DETECTION
-# NOTE: THIS COMES FROM PHASE 2 - PHASE 3 WILL DETECT IT INDEPENDENTLY
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Removed problematic problem_type_result entries
-# Phase 3 will auto-detect problem type from y_train
-
-# ─────────────────────────────────────────────────────────────────────────────
 # PHASE 1: DATA SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -181,6 +173,11 @@ data_summary:
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 3: MODEL TRAINING & EVALUATION (NEW)
 # ════════════════════════════════════════════════════════════════════════════
+
+# Simple string output from Phase 3
+problem_type:
+  type: text.text_dataset.TextDataset
+  filepath: data/08_reporting/problem_type.txt
 
 # Baseline models
 baseline_model:
