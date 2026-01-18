@@ -23,7 +23,7 @@ data_processing:
 # TARGET & FEATURES (Required by all phases)
 # ─────────────────────────────────────────────────────────────────────────────
 
-target_column: "col5"                  # Column to predict
+target_column: "Churn"                  # Column to predict
 exclude_columns: []                    # Columns to exclude from features
 
 # ─────────────────────────────────────────────────────────────────────────────
