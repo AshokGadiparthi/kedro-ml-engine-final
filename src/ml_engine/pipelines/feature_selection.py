@@ -1,5 +1,5 @@
 """
-PERFECT PHASE 2 - FEATURE SELECTION WITH REAL TARGET (FIXED)
+PERFECT PHASE 2 - FEATURE SELECTION WITH REAL TARGET (ULTRA-FIXED)
 =====================================================================
 Replaces: src/ml_engine/pipelines/feature_selection.py
 
@@ -9,6 +9,7 @@ Fixes:
   ✅ Handles correlation-based and importance-based selection
   ✅ Multiple feature importance methods
   ✅ FIXED: Removed bracket syntax error
+  ✅ ULTRA-FIXED: Handles y_train as DataFrame or Series
 
 Key: Uses ACTUAL target data, not np.random.randint()!
 =====================================================================
@@ -26,18 +27,20 @@ log = logging.getLogger(__name__)
 
 
 # ============================================================================
-# GAP 2 FIX: PROBLEM TYPE DETECTION
+# GAP 2 FIX: PROBLEM TYPE DETECTION (HANDLES DATAFRAME OR SERIES)
 # ============================================================================
 
 def detect_problem_type(
-        y: pd.Series,
+        y: pd.DataFrame,  # Changed from Series to DataFrame (y_train is a CSV)
         params: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Detect classification vs regression (Gap 2 Fix).
 
+    ULTRA-FIXED: Now handles y_train as DataFrame (from CSV) or Series
+
     Args:
-        y: Target series
+        y: Target variable (DataFrame or Series)
         params: May contain manual 'problem_type' override
 
     Returns:
@@ -46,6 +49,12 @@ def detect_problem_type(
     print(f"\n{'='*80}")
     print(f"🎯 PROBLEM TYPE DETECTION (Gap 2 Fix)")
     print(f"{'='*80}")
+
+    # Convert DataFrame to Series if needed
+    if isinstance(y, pd.DataFrame):
+        print(f"   Converting DataFrame to Series...")
+        y = y.iloc[:, 0]  # Take first column
+        print(f"   ✅ Converted")
 
     # Check for manual override
     if params.get('problem_type'):
@@ -71,7 +80,7 @@ def detect_problem_type(
         print(f"   ↓ Data type is 'object' (strings) → Classification")
         problem_type = 'classification'
         confidence = 0.95
-    elif y.dtype in ['int64', 'int32']:
+    elif y.dtype in ['int64', 'int32', 'int16', 'int8']:
         if unique_count <= 10:
             print(f"   ↓ Integer with ≤10 unique values → Classification")
             problem_type = 'classification'
@@ -80,7 +89,7 @@ def detect_problem_type(
             print(f"   ↓ Integer with >10 unique values → Regression")
             problem_type = 'regression'
             confidence = 0.7
-    elif y.dtype in ['float64', 'float32']:
+    elif y.dtype in ['float64', 'float32', 'float16']:
         print(f"   ↓ Float type → Regression")
         problem_type = 'regression'
         confidence = 0.9
@@ -115,7 +124,7 @@ def detect_problem_type(
 
 def calculate_feature_importance_with_real_target(
         X_train: pd.DataFrame,
-        y_train: pd.Series,
+        y_train: pd.DataFrame,  # Changed from Series to DataFrame
         problem_type_result: Dict[str, Any],
         params: Dict[str, Any]
 ) -> Tuple[Dict[str, float], Dict[str, Any]]:
@@ -123,10 +132,11 @@ def calculate_feature_importance_with_real_target(
     Calculate feature importance using REAL target (Gap 5 Fix).
 
     CRITICAL: Uses actual y_train, NOT fake random target!
+    ULTRA-FIXED: Handles y_train as DataFrame
 
     Args:
         X_train: Training features
-        y_train: REAL training target
+        y_train: REAL training target (DataFrame)
         problem_type_result: Dict from detect_problem_type with 'problem_type' key
         params: Configuration
 
@@ -139,6 +149,10 @@ def calculate_feature_importance_with_real_target(
 
     # FIXED: Extract problem_type from dict (not bracket syntax!)
     problem_type = problem_type_result["problem_type"]
+
+    # Convert DataFrame to Series if needed
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
 
     method = params.get('importance_method', 'tree')
 
@@ -429,4 +443,4 @@ if __name__ == "__main__":
     print("✅ Perfect Phase 2 Feature Selection pipeline created!")
     print("   • Uses REAL target for importance (Gap 5 Fix)")
     print("   • Detects problem type robustly (Gap 2 Fix)")
-    print("   • FIXED: Removed bracket syntax error!")
+    print("   • ULTRA-FIXED: Handles DataFrame/Series correctly!")
