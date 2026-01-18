@@ -1,6 +1,7 @@
 """
-PHASE 3: MODEL TRAINING & EVALUATION (ULTRA-FIXED v2)
+PHASE 3: MODEL TRAINING & EVALUATION WITH PATH A CROSS-VALIDATION
 ================================================================================
+UPDATED: Added 5-fold cross-validation (StratifiedKFold)
 Completely independent - auto-detects problem type from y_train
 No dependencies on problem_type from Phase 2 catalog
 Inputs: X_train_selected, X_test_selected, y_train, y_test (ONLY)
@@ -16,7 +17,7 @@ import pickle
 import json
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold
 from sklearn.metrics import (
     mean_squared_error, r2_score, mean_absolute_error,
     accuracy_score, precision_score, recall_score, f1_score, classification_report
@@ -63,7 +64,7 @@ def detect_problem_type_from_target(y_train: pd.Series) -> str:
 
 
 # ============================================================================
-# PHASE 3.2: TRAIN BASELINE MODEL
+# PHASE 3.2: TRAIN BASELINE MODEL WITH PATH A CROSS-VALIDATION
 # ============================================================================
 
 def train_baseline_model(
@@ -72,10 +73,11 @@ def train_baseline_model(
         params: Dict[str, Any]
 ) -> Tuple[object, Dict[str, float], str]:
     """
-    Train simple baseline model and return problem_type
+    Train simple baseline model with 5-fold cross-validation (PATH A)
+    Returns: model, metrics, problem_type
     """
     log.info("="*80)
-    log.info("PHASE 3.2: TRAINING BASELINE MODEL")
+    log.info("PHASE 3.2: TRAINING BASELINE MODEL WITH PATH A CROSS-VALIDATION")
     log.info("="*80)
 
     # FIX: Handle DataFrame input for y_train
@@ -92,6 +94,37 @@ def train_baseline_model(
         train_score = baseline.score(X_train, y_train)
         log.info(f"✅ Baseline train accuracy: {train_score:.4f}")
         metrics = {'accuracy': float(train_score)}
+
+        # ════════════════════════════════════════════════════════════════════
+        # ✨ PATH A: 5-FOLD CROSS-VALIDATION (NEW)
+        # ════════════════════════════════════════════════════════════════════
+
+        log.info("="*80)
+        log.info("📊 RUNNING 5-FOLD CROSS-VALIDATION (PATH A)")
+        log.info("="*80)
+
+        # Use StratifiedKFold to maintain class distribution in each fold
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        cv_scores = cross_val_score(baseline, X_train, y_train, cv=skf, scoring='accuracy')
+
+        log.info(f"Cross-validation scores for each fold: {[f'{score:.4f}' for score in cv_scores]}")
+        log.info(f"Mean CV Score: {cv_scores.mean():.4f}")
+        log.info(f"Std Dev: {cv_scores.std():.4f}")
+        log.info(f"Confidence Interval: {cv_scores.mean():.4f} (±{cv_scores.std():.4f})")
+        log.info("="*80)
+
+        # Store CV scores in model object for later use
+        baseline.cv_scores = cv_scores
+        baseline.cv_mean = cv_scores.mean()
+        baseline.cv_std = cv_scores.std()
+
+        # Update metrics with CV info
+        metrics.update({
+            'cv_mean': float(cv_scores.mean()),
+            'cv_std': float(cv_scores.std()),
+            'cv_scores': [float(s) for s in cv_scores]
+        })
+
     else:
         log.info("🎯 Training LinearRegression baseline...")
         baseline = LinearRegression()
@@ -342,7 +375,8 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
     Complete Phase 3 pipeline: Model Training & Evaluation
 
-    ULTRA-FIXED VERSION v2:
+    UPDATED WITH PATH A:
+    - Added 5-fold cross-validation (StratifiedKFold)
     - No catalog dependencies on problem_type
     - Auto-detects from y_train
     - Handles DataFrame inputs (converts to Series)

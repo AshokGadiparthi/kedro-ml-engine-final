@@ -1,4 +1,4 @@
-"""Data Cleaning Pipeline - Kedro 0.19.5 Compatible."""
+"""Data Cleaning Pipeline - Kedro 0.19.5 Compatible WITH OUTLIER DETECTION (PATH A)."""
 
 import pandas as pd
 import numpy as np
@@ -9,73 +9,144 @@ from kedro.pipeline import Pipeline, node
 logger = logging.getLogger(__name__)
 
 def clean_data(
-    df: pd.DataFrame,
-    handle_missing: str = "median",
-    remove_duplicates: bool = True,
+        df: pd.DataFrame,
+        handle_missing: str = "median",
+        remove_duplicates: bool = True,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-    """Clean data with standard preprocessing.
-    
+    """Clean data with standard preprocessing + PATH A outlier detection.
+
     Args:
         df: DataFrame to clean
         handle_missing: Strategy for missing values (drop, median, mean)
         remove_duplicates: Whether to remove duplicate rows
-        
+
     Returns:
         Tuple of (cleaned DataFrame, report dictionary)
     """
     logger.info("🧹 Cleaning data...")
-    
+
     df_clean = df.copy()
     report: Dict[str, Any] = {"original_shape": df.shape, "actions": []}
-    
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ✨ PATH A: OUTLIER DETECTION & CAPPING (NEW)
+    # ════════════════════════════════════════════════════════════════════════
+
+    logger.info("="*80)
+    logger.info("🔍 STARTING OUTLIER DETECTION (PATH A)")
+    logger.info("="*80)
+
+    # Get numeric columns
+    numeric_cols = df_clean.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    logger.info(f"Found {len(numeric_cols)} numeric columns for outlier detection")
+
+    # Detect outliers using IQR method
+    outliers_per_col = {}
+    total_outliers = 0
+
+    for col in numeric_cols:
+        Q1 = df_clean[col].quantile(0.25)
+        Q3 = df_clean[col].quantile(0.75)
+        IQR = Q3 - Q1
+
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        outlier_mask = (df_clean[col] < lower_bound) | (df_clean[col] > upper_bound)
+        n_outliers = outlier_mask.sum()
+        outliers_per_col[col] = n_outliers
+        total_outliers += n_outliers
+
+        if n_outliers > 0:
+            logger.info(f"  Column '{col}': {n_outliers} outliers (bounds: [{lower_bound:.2f}, {upper_bound:.2f}])")
+
+    logger.info(f"Total outliers found: {total_outliers} across {len(numeric_cols)} columns")
+
+    # CAP OUTLIERS (instead of removing to preserve data)
+    logger.info("Capping outliers to reasonable bounds...")
+    for col in numeric_cols:
+        Q1 = df_clean[col].quantile(0.25)
+        Q3 = df_clean[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        # Cap values
+        df_clean[col] = df_clean[col].clip(lower_bound, upper_bound)
+
+    logger.info("✅ Outliers capped successfully")
+    report["outliers_detected"] = total_outliers
+    report["outliers_per_column"] = outliers_per_col
+    report["actions"].append(f"Detected and capped {total_outliers} outliers")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ✨ PATH A: DUPLICATE DETECTION & REMOVAL (ENHANCED)
+    # ════════════════════════════════════════════════════════════════════════
+
+    logger.info("-"*80)
+    logger.info("🔍 DUPLICATE DETECTION")
+    logger.info("-"*80)
+
     if remove_duplicates:
-        n_before = len(df_clean)
+        initial_rows = len(df_clean)
         df_clean = df_clean.drop_duplicates()
-        n_removed = n_before - len(df_clean)
-        
+        n_removed = initial_rows - len(df_clean)
+
         if n_removed > 0:
-            logger.info(f"   Removed {n_removed} duplicate rows")
+            logger.info(f"Initial rows: {initial_rows}")
+            logger.info(f"✅ Duplicates removed. Final rows: {len(df_clean)}")
+            logger.info(f"   Rows deleted: {n_removed}")
             report["actions"].append(f"Removed {n_removed} duplicates")
-    
+            report["duplicates_removed"] = n_removed
+
+    # ════════════════════════════════════════════════════════════════════════
+    # Standard missing value handling
+    # ════════════════════════════════════════════════════════════════════════
+
+    logger.info("-"*80)
+    logger.info("📊 HANDLING MISSING VALUES")
+    logger.info("-"*80)
+
     logger.info(f"   Handling missing values with '{handle_missing}' strategy")
-    
+
     if handle_missing == "drop":
         n_before = len(df_clean)
         df_clean = df_clean.dropna()
         n_dropped = n_before - len(df_clean)
         logger.info(f"   Dropped {n_dropped} rows with missing values")
         report["actions"].append(f"Dropped {n_dropped} rows with missing values")
-    
+
     elif handle_missing == "median":
         numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
             if df_clean[col].isnull().any():
                 median_val = df_clean[col].median()
                 df_clean[col].fillna(median_val, inplace=True)
-        
+
         if len(numeric_cols) > 0:
             logger.info(f"   Filled {len(numeric_cols)} numeric columns with median")
             report["actions"].append(f"Filled {len(numeric_cols)} numeric columns with median")
-    
+
     elif handle_missing == "mean":
         numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
             if df_clean[col].isnull().any():
                 mean_val = df_clean[col].mean()
                 df_clean[col].fillna(mean_val, inplace=True)
-    
+
     categorical_cols = df_clean.select_dtypes(include=['object']).columns
     for col in categorical_cols:
         if df_clean[col].isnull().any():
             mode_val = df_clean[col].mode()
             if len(mode_val) > 0:
                 df_clean[col].fillna(mode_val[0], inplace=True)
-    
+
     report["final_shape"] = df_clean.shape
     report["rows_removed"] = df.shape[0] - df_clean.shape[0]
-    
+
     logger.info(f"   ✅ Cleaned data shape: {df_clean.shape}")
-    
+    logger.info("="*80)
+
     return df_clean, report
 
 def create_pipeline() -> Pipeline:

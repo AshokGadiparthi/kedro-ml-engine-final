@@ -38,6 +38,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score, accuracy_score
 from sklearn.preprocessing import StandardScaler
 from kedro.pipeline import Pipeline, node
+from sklearn.ensemble import VotingClassifier, VotingRegressor
 
 try:
     from xgboost import XGBRegressor, XGBClassifier
@@ -257,6 +258,102 @@ def phase4_train_all_algorithms(
 
     return trained_models, results_df
 
+# ============================================================================
+# PATH A: ENSEMBLE VOTING FROM TOP 5 MODELS (NEW FUNCTION)
+# ============================================================================
+
+def phase4_create_ensemble_voting(
+        trained_models: Dict[str, object],
+        results_df: pd.DataFrame,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        problem_type: str
+) -> Tuple[pd.DataFrame, Dict[str, object]]:
+    """
+    Create ensemble voting classifier/regressor from top 5 models (PATH A)
+    """
+
+    log.info("="*80)
+    log.info("🎯 CREATING ENSEMBLE VOTING CLASSIFIER (PATH A)")
+    log.info("="*80)
+
+    # Handle DataFrame inputs
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+    if isinstance(y_test, pd.DataFrame):
+        y_test = y_test.iloc[:, 0]
+
+    # Get top 5 models by test score
+    top_5_items = results_df.nlargest(5, 'Test_Score')[['Algorithm', 'Test_Score']].values
+    top_5_names = [name for name, score in top_5_items]
+
+    log.info(f"Top 5 models selected:")
+    for i, (name, score) in enumerate(top_5_items, 1):
+        log.info(f"  {i}. {name}: {score:.4f}")
+
+    # Create voting ensemble from top 5
+    voting_estimators = [
+        (name, trained_models[name]) for name in top_5_names if name in trained_models
+    ]
+
+    if problem_type == 'classification':
+        log.info("Creating VotingClassifier...")
+        voting_clf = VotingClassifier(
+            estimators=voting_estimators,
+            voting='soft'  # Use predicted probabilities
+        )
+    else:
+        log.info("Creating VotingRegressor...")
+        voting_clf = VotingRegressor(
+            estimators=voting_estimators
+        )
+
+    # Train ensemble
+    log.info(f"Training ensemble from top 5 models...")
+    voting_clf.fit(X_train, y_train)
+
+    # Evaluate ensemble
+    if problem_type == 'classification':
+        y_pred_ensemble = voting_clf.predict(X_test)
+        ensemble_score = accuracy_score(y_test, y_pred_ensemble)
+        metric = 'accuracy'
+    else:
+        y_pred_ensemble = voting_clf.predict(X_test)
+        ensemble_score = r2_score(y_test, y_pred_ensemble)
+        metric = 'r2'
+
+    # Calculate improvement
+    best_individual_score = top_5_items[0][1]
+    ensemble_gain = (ensemble_score - best_individual_score)
+
+    log.info(f"✅ Ensemble training complete")
+    log.info(f"  Best individual model: {best_individual_score:.4f}")
+    log.info(f"  Ensemble score: {ensemble_score:.4f}")
+    log.info(f"  Improvement: +{ensemble_gain:.4f} ({ensemble_gain*100:.2f}%)")
+    log.info("="*80)
+
+    # Add ensemble to results
+    ensemble_result = {
+        'Algorithm': 'ENSEMBLE_TOP_5',
+        'Train_Score': voting_clf.score(X_train, y_train),
+        'Test_Score': ensemble_score,
+        'Overfit_Gap': voting_clf.score(X_train, y_train) - ensemble_score,
+        'Metric': metric
+    }
+
+    results_with_ensemble = pd.concat([
+        results_df,
+        pd.DataFrame([ensemble_result])
+    ], ignore_index=True).sort_values('Test_Score', ascending=False)
+
+    # Add to trained models
+    trained_models_with_ensemble = trained_models.copy()
+    trained_models_with_ensemble['ENSEMBLE_TOP_5'] = voting_clf
+
+    return results_with_ensemble, trained_models_with_ensemble
+
 
 # ============================================================================
 # PHASE 4.4: GENERATE COMPARISON REPORT
@@ -388,15 +485,22 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
 
         node(
+            func=phase4_create_ensemble_voting,
+            inputs=["phase4_trained_models", "phase4_results", "X_train_selected", "y_train", "X_test_selected", "y_test", "problem_type"],
+            outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble"],
+            name="phase4_ensemble_voting"
+        ),
+
+        node(
             func=phase4_generate_report,
-            inputs=["phase4_trained_models", "phase4_results", "problem_type"],
+            inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "problem_type"],
             outputs=["phase4_report", "phase4_summary"],
             name="phase4_generate_report"
         ),
 
         node(
             func=phase4_save_results,
-            inputs=["phase4_trained_models", "phase4_results", "phase4_report", "phase4_summary", "problem_type"],
+            inputs=["phase4_trained_models_with_ensemble", "phase4_results_with_ensemble", "phase4_report", "phase4_summary", "problem_type"],
             outputs="phase4_save_status",
             name="phase4_save_results"
         ),
