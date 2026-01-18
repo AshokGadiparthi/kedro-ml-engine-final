@@ -417,7 +417,7 @@ def phase4_create_ensemble_voting(
 # ============================================================================
 
 def phase4_generate_learning_curves(
-        best_model: object,
+        phase4_best_model: object,
         X_train: pd.DataFrame,
         y_train: pd.Series,
         problem_type: str
@@ -433,7 +433,7 @@ def phase4_generate_learning_curves(
 
     try:
         train_sizes, train_scores, val_scores = learning_curve(
-            best_model, X_train, y_train,
+            phase4_best_model, X_train, y_train,
             cv=5,
             scoring='accuracy' if problem_type == 'classification' else 'r2',
             n_jobs=-1,
@@ -489,7 +489,7 @@ def phase4_generate_learning_curves(
 # ============================================================================
 
 def phase4_generate_shap_analysis(
-        best_model: object,
+        phase4_best_model: object,
         X_test: pd.DataFrame,
         problem_type: str
 ) -> Dict[str, Any]:
@@ -504,11 +504,11 @@ def phase4_generate_shap_analysis(
         return {'shap_analysis_generated': False, 'error': 'SHAP not installed'}
 
     try:
-        model_name = best_model.__class__.__name__
+        model_name = phase4_best_model.__class__.__name__
 
         if 'Forest' in model_name or 'Boost' in model_name or 'XGB' in model_name:
             log.info(f"Using TreeExplainer for {model_name}...")
-            explainer = shap.TreeExplainer(best_model)
+            explainer = shap.TreeExplainer(phase4_best_model)
             shap_values = explainer.shap_values(X_test)
 
             if isinstance(shap_values, list):
@@ -516,7 +516,7 @@ def phase4_generate_shap_analysis(
         else:
             log.info(f"Using KernelExplainer for {model_name}...")
             explainer = shap.KernelExplainer(
-                best_model.predict,
+                phase4_best_model.predict,
                 shap.sample(X_test, 100)
             )
             shap_values = explainer.shap_values(X_test.sample(100))
@@ -688,7 +688,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         node(
             func=phase4_create_ensemble_voting,
             inputs=["phase4_trained_models", "phase4_results", "X_train_selected", "y_train", "X_test_selected", "y_test", "problem_type"],
-            outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble", "best_model"],
+            outputs=["phase4_results_with_ensemble", "phase4_trained_models_with_ensemble", "phase4_best_model"],
             name="phase4_ensemble_voting"
         ),
 
@@ -703,7 +703,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         # PATH C: Learning curves (FIXED - now receives best_model)
         node(
             func=phase4_generate_learning_curves,
-            inputs=["best_model", "X_train_selected", "y_train", "problem_type"],
+            inputs=["phase4_best_model", "X_train_selected", "y_train", "problem_type"],
             outputs="phase4_learning_curves",
             name="phase4_learning_curves"
         ),
@@ -711,7 +711,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         # PATH C: SHAP analysis (FIXED - now receives best_model)
         node(
             func=phase4_generate_shap_analysis,
-            inputs=["best_model", "X_test_selected", "problem_type"],
+            inputs=["phase4_best_model", "X_test_selected", "problem_type"],
             outputs="phase4_shap_analysis",
             name="phase4_shap_analysis"
         ),
