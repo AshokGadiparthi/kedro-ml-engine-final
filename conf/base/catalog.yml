@@ -1,8 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# COMPLETE DATA CATALOG - PHASES 1, 2, 3 & 4 (100% INTEGRATED)
-# ════════════════════════════════════════════════════════════════════════════
-# PRESERVES ALL EXISTING PHASE 1 & 2 ENTRIES
-# ADDS COMPLETE PHASE 3 & 4 ENTRIES
+# FIXED DATA CATALOG - SOLVES problem_type MISMATCH
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -167,9 +164,16 @@ selected_features:
   filepath: data/08_reporting/selected_features.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 2: PROBLEM TYPE DETECTION
+# PHASE 2: PROBLEM TYPE DETECTION (CRITICAL - FROM PHASE 2)
 # ─────────────────────────────────────────────────────────────────────────────
+# NOTE: problem_type output comes from Phase 2 feature_selection pipeline
+# Phase 3 will read this value
 
+problem_type:
+  type: text.text_dataset.TextDataset
+  filepath: data/08_reporting/problem_type.txt
+
+# Also preserve the result dictionary if Phase 2 outputs it
 problem_type_result:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/problem_type_result.pkl
@@ -186,10 +190,8 @@ data_summary:
 # PHASE 3: MODEL TRAINING & EVALUATION (NEW)
 # ════════════════════════════════════════════════════════════════════════════
 
-# Problem type detection
-problem_type:
-  type: text.text_dataset.TextDataset
-  filepath: data/06_models/problem_type.txt
+# Problem type (input from Phase 2, used by Phase 3)
+# This is a simple string: "classification" or "regression"
 
 # Baseline models
 baseline_model:

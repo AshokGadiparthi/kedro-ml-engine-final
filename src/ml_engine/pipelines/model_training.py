@@ -1,9 +1,9 @@
 """
-PHASE 3: MODEL TRAINING & EVALUATION
+PHASE 3: MODEL TRAINING & EVALUATION (FIXED)
 ================================================================================
-Complete integration with existing Phase 1 & 2
-Inputs: X_train_selected, X_test_selected, y_train, y_test (from Phase 2)
-Outputs: baseline_model, best_model, model_evaluation
+Fixed version that correctly reads problem_type from Phase 2 output
+Inputs: X_train_selected, X_test_selected, y_train, y_test, problem_type
+Outputs: baseline_model, best_model, model_evaluation, phase3_predictions
 ================================================================================
 """
 
@@ -13,8 +13,7 @@ import logging
 from typing import Dict, Any, Tuple
 import pickle
 import json
-from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, Lasso
-from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import (
@@ -27,40 +26,37 @@ log = logging.getLogger(__name__)
 
 
 # ============================================================================
-# PHASE 3.1: DETECT PROBLEM TYPE
+# PHASE 3.1: ENSURE PROBLEM TYPE IS STRING
 # ============================================================================
 
-def detect_problem_type(y_train: pd.Series, params: Dict[str, Any]) -> str:
+def ensure_problem_type_string(problem_type: Any) -> str:
     """
-    Auto-detect classification vs regression from target variable
-
-    Handles override via params[problem_type][override]
+    Ensure problem_type is a clean string value
+    Handles if it comes as dict, object, or already a string
     """
     log.info("="*80)
-    log.info("PHASE 3.1: DETECTING PROBLEM TYPE")
+    log.info("PHASE 3.1: ENSURING PROBLEM TYPE IS VALID STRING")
     log.info("="*80)
 
-    # Check for override
-    override = params.get('problem_type', {}).get('override', None)
-    if override:
-        log.info(f"✅ Problem type override: {override}")
-        return override
+    # If it's a dict (from problem_type_result), extract the value
+    if isinstance(problem_type, dict):
+        log.info(f"Problem type is dict: {problem_type}")
+        if 'problem_type' in problem_type:
+            problem_type = problem_type['problem_type']
+        else:
+            # Get first value if it's a dict
+            problem_type = list(problem_type.values())[0] if problem_type else 'classification'
 
-    # Auto-detect
-    n_unique = y_train.nunique()
-    unique_ratio = n_unique / len(y_train)
+    # Convert to string and clean
+    problem_type = str(problem_type).lower().strip()
 
-    log.info(f"🔍 Target stats: {n_unique} unique values, {unique_ratio:.2%} ratio")
+    # Validate
+    if problem_type not in ['classification', 'regression']:
+        log.warning(f"Unknown problem type: {problem_type}, defaulting to classification")
+        problem_type = 'classification'
 
-    # Classification: object/bool type or <20 unique values with <10% ratio
-    if y_train.dtype in ['object', 'bool'] or (n_unique < 20 and unique_ratio < 0.1):
-        detected = 'classification'
-        log.info("✅ Detected: CLASSIFICATION")
-    else:
-        detected = 'regression'
-        log.info("✅ Detected: REGRESSION")
-
-    return detected
+    log.info(f"✅ Problem type: {problem_type}")
+    return problem_type
 
 
 # ============================================================================
@@ -79,6 +75,9 @@ def train_baseline_model(
     log.info("="*80)
     log.info("PHASE 3.2: TRAINING BASELINE MODEL")
     log.info("="*80)
+
+    # Ensure problem_type is string
+    problem_type = ensure_problem_type_string(problem_type)
 
     if problem_type == 'classification':
         log.info("🎯 Training LogisticRegression baseline...")
@@ -117,10 +116,10 @@ def hyperparameter_tuning(
     log.info("PHASE 3.3: HYPERPARAMETER TUNING WITH GRIDSEARCHCV")
     log.info("="*80)
 
-    tuning_params = params.get('feature_selection', {})
-    cv_folds = tuning_params.get('test_size', 5)
-    if cv_folds < 1:
-        cv_folds = 5
+    # Ensure problem_type is string
+    problem_type = ensure_problem_type_string(problem_type)
+
+    cv_folds = 5
 
     if problem_type == 'classification':
         log.info("🎯 Tuning RandomForestClassifier...")
@@ -184,6 +183,9 @@ def evaluate_model(
     log.info("="*80)
     log.info("PHASE 3.4: COMPREHENSIVE MODEL EVALUATION")
     log.info("="*80)
+
+    # Ensure problem_type is string
+    problem_type = ensure_problem_type_string(problem_type)
 
     y_train_pred = model.predict(X_train)
     y_test_pred = model.predict(X_test)
@@ -252,6 +254,9 @@ def save_model_and_evaluation(
     log.info("PHASE 3.5: SAVING MODEL & EVALUATION METRICS")
     log.info("="*80)
 
+    # Ensure problem_type is string
+    problem_type = ensure_problem_type_string(problem_type)
+
     import os
     os.makedirs('data/06_models', exist_ok=True)
 
@@ -286,6 +291,9 @@ def make_predictions(
     log.info("="*80)
     log.info("PHASE 3.6: MAKING PREDICTIONS")
     log.info("="*80)
+
+    # Ensure problem_type is string
+    problem_type = ensure_problem_type_string(problem_type)
 
     predictions = model.predict(X_test)
 
@@ -331,9 +339,9 @@ def create_pipeline(**kwargs) -> Pipeline:
       - X_test_selected: Final engineered features
       - y_train: Training target
       - y_test: Test target
+      - problem_type: 'classification' or 'regression' (from Phase 2)
 
     Outputs:
-      - problem_type: 'classification' or 'regression'
       - baseline_model, baseline_metrics
       - best_model, tuning_info
       - model_evaluation
@@ -341,13 +349,6 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
 
     return Pipeline([
-        node(
-            func=detect_problem_type,
-            inputs=["y_train", "params:problem_type"],
-            outputs="problem_type",
-            name="phase3_detect_problem_type"
-        ),
-
         node(
             func=train_baseline_model,
             inputs=["X_train_selected", "y_train", "problem_type", "params:problem_type"],
