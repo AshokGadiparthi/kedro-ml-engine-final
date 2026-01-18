@@ -13,7 +13,8 @@ data_path: "data/01_raw/data.csv"
 # TARGET & FEATURES (Required by all phases)
 # ─────────────────────────────────────────────────────────────────────────────
 
-target_column: "Churn"                  # Column to predict (ADJUST TO YOUR DATASET)
+#target_column: "Churn"                  # Column to predict (ADJUST TO YOUR DATASET)
+target_column: "income"
 exclude_columns: []                    # Columns to exclude from features
 
 # ─────────────────────────────────────────────────────────────────────────────
