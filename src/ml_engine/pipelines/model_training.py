@@ -1,5 +1,5 @@
 """
-PHASE 3: MODEL TRAINING & EVALUATION (ULTRA-FIXED)
+PHASE 3: MODEL TRAINING & EVALUATION (ULTRA-FIXED v2)
 ================================================================================
 Completely independent - auto-detects problem type from y_train
 No dependencies on problem_type from Phase 2 catalog
@@ -39,6 +39,12 @@ def detect_problem_type_from_target(y_train: pd.Series) -> str:
     log.info("PHASE 3.1: DETECTING PROBLEM TYPE FROM TARGET")
     log.info("="*80)
 
+    # FIX: Handle case where y_train is passed as DataFrame instead of Series
+    if isinstance(y_train, pd.DataFrame):
+        log.info("ℹ️  Input is DataFrame, converting to Series...")
+        y_train = y_train.iloc[:, 0]  # Extract first column as Series
+        log.info(f"ℹ️  Converted DataFrame to Series: {y_train.name}")
+
     # Check unique values
     n_unique = y_train.nunique()
     unique_ratio = float(n_unique / len(y_train))
@@ -71,6 +77,10 @@ def train_baseline_model(
     log.info("="*80)
     log.info("PHASE 3.2: TRAINING BASELINE MODEL")
     log.info("="*80)
+
+    # FIX: Handle DataFrame input for y_train
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
 
     # Detect problem type
     problem_type = detect_problem_type_from_target(y_train)
@@ -111,6 +121,10 @@ def hyperparameter_tuning(
     log.info("="*80)
     log.info("PHASE 3.3: HYPERPARAMETER TUNING WITH GRIDSEARCHCV")
     log.info("="*80)
+
+    # FIX: Handle DataFrame input for y_train
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
 
     cv_folds = 5
 
@@ -176,6 +190,12 @@ def evaluate_model(
     log.info("="*80)
     log.info("PHASE 3.4: COMPREHENSIVE MODEL EVALUATION")
     log.info("="*80)
+
+    # FIX: Handle DataFrame input for y_train and y_test
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+    if isinstance(y_test, pd.DataFrame):
+        y_test = y_test.iloc[:, 0]
 
     y_train_pred = model.predict(X_train)
     y_test_pred = model.predict(X_test)
@@ -279,6 +299,10 @@ def make_predictions(
     log.info("PHASE 3.6: MAKING PREDICTIONS")
     log.info("="*80)
 
+    # FIX: Handle DataFrame input for y_test
+    if isinstance(y_test, pd.DataFrame):
+        y_test = y_test.iloc[:, 0]
+
     predictions = model.predict(X_test)
 
     if problem_type == 'classification':
@@ -318,16 +342,17 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
     Complete Phase 3 pipeline: Model Training & Evaluation
 
-    ULTRA-FIXED VERSION:
+    ULTRA-FIXED VERSION v2:
     - No catalog dependencies on problem_type
     - Auto-detects from y_train
+    - Handles DataFrame inputs (converts to Series)
     - Completely independent of Phase 2
 
     Inputs (from Phase 2):
       - X_train_selected: Final engineered features
       - X_test_selected: Final engineered features
-      - y_train: Training target
-      - y_test: Test target
+      - y_train: Training target (Series or DataFrame)
+      - y_test: Test target (Series or DataFrame)
 
     Outputs:
       - baseline_model, baseline_metrics
