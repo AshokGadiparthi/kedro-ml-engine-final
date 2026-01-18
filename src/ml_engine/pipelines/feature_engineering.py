@@ -14,13 +14,15 @@ This module:
 ✅ Handles sparse matrices for large feature sets
 ✅ Includes safeguards against feature explosion
 ✅ Production-tested and maintainable
+✅ FEATURE SELECTION NODE (Creates X_train_selected & X_test_selected)
 
 Key Design Principles:
 1. DROP ID columns first (customerID, user_id, etc.)
 2. ENCODE categoricals smartly (only useful ones)
 3. LIMIT interactions (only important combinations)
 4. SCALE appropriately (numeric vs categorical)
-5. VALIDATE output (never > 1000 features without explicit approval)
+5. SELECT best features using SelectKBest
+6. VALIDATE output (never > 1000 features without explicit approval)
 """
 
 import pandas as pd
@@ -29,7 +31,7 @@ from sklearn.preprocessing import (
     OneHotEncoder, StandardScaler, LabelEncoder,
     PolynomialFeatures, MinMaxScaler
 )
-from sklearn.feature_selection import VarianceThreshold
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_classif, f_regression
 from typing import Dict, Any, Tuple, List
 import logging
 import warnings
@@ -232,102 +234,55 @@ def smart_polynomial_features(
     4. Skip if would exceed max features
 
     Args:
-        X: DataFrame with features
+        X: DataFrame with numeric features
         numeric_cols: List of numeric column names
         params: Configuration
 
     Returns:
-        (features_with_polynomial, new_feature_names)
+        (X_with_poly, feature_names)
     """
     print(f"\n{'='*80}")
-    print(f"📐 SMART POLYNOMIAL FEATURES (Permanent Fix #3)")
+    print(f"⚡ POLYNOMIAL FEATURES (Permanent Fix #3)")
     print(f"{'='*80}")
 
-    use_polynomial = params.get('polynomial_features', False)
-    polynomial_degree = params.get('polynomial_degree', 2)
-    max_polynomial_features = params.get('max_polynomial_features', 50)
+    create_poly = params.get('polynomial_features', False)
+
+    if not create_poly:
+        print(f"\n   ✓ Polynomial features: DISABLED")
+        print(f"{'='*80}\n")
+        return X, X.columns.tolist()
+
+    degree = params.get('polynomial_degree', 2)
+    max_poly_features = params.get('max_polynomial_features', 100)
 
     print(f"\n   Configuration:")
-    print(f"      Use polynomial: {use_polynomial}")
-    print(f"      Max degree: {polynomial_degree}")
-    print(f"      Max features: {max_polynomial_features}")
+    print(f"      Create polynomial: {create_poly}")
+    print(f"      Degree: {degree}")
+    print(f"      Max features: {max_poly_features}")
 
-    X_result = X.copy()
-    new_feature_names = []
+    # Check if would create explosion
+    n_features_now = X.shape[1]
+    estimated_features = n_features_now ** (1 + degree)
 
-    if not use_polynomial:
-        print(f"\n   Polynomial features DISABLED")
+    if estimated_features > max_poly_features:
+        print(f"\n   ⚠️  Would create ~{estimated_features:.0f} features (exceeds {max_poly_features})")
+        print(f"   ✓ Skipping polynomial features to avoid explosion")
         print(f"{'='*80}\n")
-        return X_result, new_feature_names
-
-    if not numeric_cols:
-        print(f"\n   No numeric columns found - skipping polynomial")
-        print(f"{'='*80}\n")
-        return X_result, new_feature_names
-
-    print(f"\n   Creating polynomial features from {len(numeric_cols)} numeric columns...")
-
-    # Get numeric data
-    X_numeric = X[numeric_cols].copy()
-
-    # Calculate how many features would be created
-    if polynomial_degree == 2:
-        # n + n(n-1)/2 = n(n+1)/2
-        expected_features = len(numeric_cols) * (len(numeric_cols) + 1) // 2
-    elif polynomial_degree == 3:
-        expected_features = len(numeric_cols) * (len(numeric_cols) + 1) * (len(numeric_cols) + 2) // 6
-    else:
-        expected_features = 1000  # Conservative estimate
-
-    print(f"      Expected features: {expected_features}")
-
-    # Check if safe to proceed
-    if expected_features > max_polynomial_features:
-        print(f"      ⚠️  Would create {expected_features} features!")
-        print(f"      Exceeds limit of {max_polynomial_features}")
-        print(f"      → SKIPPING polynomial features to prevent explosion")
-        print(f"{'='*80}\n")
-        return X_result, new_feature_names
+        return X, X.columns.tolist()
 
     # Create polynomial features
-    poly = PolynomialFeatures(
-        degree=polynomial_degree,
-        include_bias=False,
-        interaction_only=False
-    )
+    print(f"\n   Creating degree-{degree} polynomial features...")
+    poly = PolynomialFeatures(degree=degree, include_bias=False)
+    X_poly = poly.fit_transform(X)
 
-    X_poly = poly.fit_transform(X_numeric)
-
-    # Get feature names
-    poly_feature_names = poly.get_feature_names_out(numeric_cols).tolist()
-
-    # Remove original features (keep only new polynomial features)
-    # Keep interaction and polynomial terms only
-    new_poly_features = [
-        name for name in poly_feature_names
-        if name not in numeric_cols
-    ]
-
-    if new_poly_features:
-        # Add only new polynomial features
-        n_original = len(numeric_cols)
-        X_new_poly = X_poly[:, n_original:]  # Skip original features
-
-        X_result = pd.concat([
-            X_result,
-            pd.DataFrame(X_new_poly, columns=new_poly_features, index=X.index)
-        ], axis=1)
-
-        new_feature_names = new_poly_features
-        print(f"      ✓ Created {len(new_poly_features)} new polynomial features")
-
+    print(f"      ✓ Created {X_poly.shape[1]} features")
     print(f"{'='*80}\n")
 
-    return X_result, new_feature_names
+    return pd.DataFrame(X_poly), [f"poly_{i}" for i in range(X_poly.shape[1])]
 
 
 # ============================================================================
-# UTILITY: VARIANCE THRESHOLD FILTER (Permanent solution #4)
+# UTILITY: FILTER LOW-VARIANCE FEATURES (Permanent solution #4)
 # ============================================================================
 
 def filter_low_variance_features(
@@ -335,71 +290,54 @@ def filter_low_variance_features(
         params: Dict[str, Any]
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Remove features with very low variance (near-constant features).
+    Remove low-variance features that carry little information.
 
-    These features add no information and can cause problems.
+    Low-variance features are nearly constant and don't help prediction.
 
     Args:
         X: DataFrame with features
         params: Configuration
 
     Returns:
-        (filtered_features, removed_feature_names)
+        (X_filtered, removed_columns)
     """
     print(f"\n{'='*80}")
-    print(f"🔥 VARIANCE-BASED FEATURE FILTERING (Permanent Fix #4)")
+    print(f"🔬 VARIANCE FILTERING (Permanent Fix #4)")
     print(f"{'='*80}")
 
-    variance_threshold = params.get('variance_threshold', 0.01)
+    threshold = params.get('variance_threshold', 0.01)
 
     print(f"\n   Configuration:")
-    print(f"      Variance threshold: {variance_threshold}")
+    print(f"      Variance threshold: {threshold}")
 
-    # Get numeric columns only
-    X_numeric = X.select_dtypes(include=[np.number])
-    X_categorical = X.select_dtypes(exclude=[np.number])
+    # Apply variance threshold
+    selector = VarianceThreshold(threshold=threshold)
+    X_filtered = selector.fit_transform(X)
 
-    # Apply variance threshold to numeric
-    selector = VarianceThreshold(threshold=variance_threshold)
+    removed = X.columns[~selector.get_support()].tolist()
 
-    try:
-        X_filtered_numeric = selector.fit_transform(X_numeric)
+    print(f"\n   Result:")
+    print(f"      Features before: {X.shape[1]}")
+    print(f"      Features after: {X_filtered.shape[1]}")
+    print(f"      Removed: {len(removed)} low-variance features")
 
-        # Get selected feature names
-        selected_indices = selector.get_support()
-        selected_cols = X_numeric.columns[selected_indices].tolist()
-        removed_cols = X_numeric.columns[~selected_indices].tolist()
-
-        if removed_cols:
-            print(f"\n   Removed {len(removed_cols)} low-variance features:")
-            for col in removed_cols[:10]:  # Show first 10
-                print(f"      - {col}")
-            if len(removed_cols) > 10:
-                print(f"      ... and {len(removed_cols)-10} more")
-
-        # Combine with categorical features
-        X_result = pd.DataFrame(
-            X_filtered_numeric,
-            columns=selected_cols,
-            index=X.index
-        )
-        X_result = pd.concat([X_result, X_categorical], axis=1)
-
-        print(f"\n   Result: {X.shape[1]} features → {X_result.shape[1]} features")
-
-    except Exception as e:
-        print(f"\n   Error in variance filtering: {e}")
-        print(f"   Keeping all features")
-        X_result = X
-        removed_cols = []
+    if removed:
+        print(f"      Removed columns: {removed[:5]}{'...' if len(removed) > 5 else ''}")
 
     print(f"{'='*80}\n")
 
-    return X_result, removed_cols
+    # Return as DataFrame
+    X_result = pd.DataFrame(
+        X_filtered,
+        columns=X.columns[selector.get_support()].tolist(),
+        index=X.index
+    )
+
+    return X_result, removed
 
 
 # ============================================================================
-# UTILITY: FEATURE EXPLOSION SAFETY CHECK (Permanent solution #5)
+# UTILITY: VALIDATE FEATURE COUNT (Permanent solution #5)
 # ============================================================================
 
 def validate_feature_count(
@@ -408,21 +346,25 @@ def validate_feature_count(
         raise_error: bool = False
 ) -> bool:
     """
-    Safety check: Prevent feature explosion from going unnoticed.
+    Validate that feature count hasn't exploded.
+
+    Feature explosion is a common issue in ML pipelines.
+    This provides an early warning.
 
     Args:
         X: DataFrame to check
-        max_allowed: Maximum allowed features
-        raise_error: If True, raise error on explosion
+        max_allowed: Maximum features allowed
+        raise_error: If True, raise error when exceeded
 
     Returns:
-        True if valid, False if explosion detected
+        True if valid, False if exceeded
     """
+    print(f"\n{'='*80}")
+    print(f"✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)")
+    print(f"{'='*80}")
+
     n_features = X.shape[1]
 
-    print(f"\n{'='*80}")
-    print(f"✅ FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)")
-    print(f"{'='*80}")
     print(f"\n   Total features: {n_features}")
     print(f"   Max allowed: {max_allowed}")
 
@@ -630,19 +572,124 @@ def engineer_features(
 
 
 # ============================================================================
-# PIPELINE DEFINITION
+# NEW: FEATURE SELECTION NODE - Creates X_train_selected & X_test_selected
+# ============================================================================
+
+def feature_selection(
+        X_train_engineered: pd.DataFrame,
+        X_test_engineered: pd.DataFrame,
+        y_train: pd.Series,
+        params: Dict[str, Any]
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    FEATURE SELECTION NODE
+
+    THIS NODE CREATES X_train_selected AND X_test_selected
+    This was the MISSING CODE causing X_test_selected.csv error!
+
+    Uses SelectKBest to select top K features based on target relationship.
+
+    Args:
+        X_train_engineered: Engineered features from Phase 2
+        X_test_engineered: Engineered test features
+        y_train: Target variable
+        params: Configuration (n_features_to_select, method)
+
+    Returns:
+        (X_train_selected, X_test_selected) → Creates CSV files
+    """
+    print(f"\n{'='*80}")
+    print(f"🎯 FEATURE SELECTION NODE (Creates selected datasets)")
+    print(f"{'='*80}")
+
+    # Handle DataFrame input for y_train
+    if isinstance(y_train, pd.DataFrame):
+        y_train = y_train.iloc[:, 0]
+
+    # Get parameters
+    n_features = params.get('n_features_to_select', 10)
+    method = params.get('feature_selection_method', 'kbest')
+
+    print(f"\n   Input features: {X_train_engineered.shape[1]}")
+    print(f"   Selecting: {n_features} features")
+    print(f"   Method: {method}")
+
+    # Determine problem type (classification vs regression)
+    n_unique = y_train.nunique()
+    is_classification = n_unique < 20
+
+    if is_classification:
+        score_func = f_classif
+        problem_type = "Classification"
+    else:
+        score_func = f_regression
+        problem_type = "Regression"
+
+    print(f"   Problem type: {problem_type}")
+
+    # Create selector
+    k = min(n_features, X_train_engineered.shape[1])
+    selector = SelectKBest(score_func=score_func, k=k)
+
+    # FIT on training data
+    print(f"\n   Fitting SelectKBest on training data...")
+    X_train_selected_array = selector.fit_transform(X_train_engineered, y_train)
+
+    # Get selected feature names
+    selected_features = X_train_engineered.columns[selector.get_support()].tolist()
+
+    # Create output DataFrames
+    X_train_selected = pd.DataFrame(
+        X_train_selected_array,
+        columns=selected_features,
+        index=X_train_engineered.index
+    )
+
+    # TRANSFORM test data with same features
+    print(f"   Transforming test data with selected features...")
+    X_test_selected_array = selector.transform(X_test_engineered)
+    X_test_selected = pd.DataFrame(
+        X_test_selected_array,
+        columns=selected_features,
+        index=X_test_engineered.index
+    )
+
+    print(f"\n   ✅ Selected {X_train_selected.shape[1]} features:")
+    print(f"      {selected_features}")
+    print(f"\n   Output shapes:")
+    print(f"      X_train_selected: {X_train_selected.shape}")
+    print(f"      X_test_selected: {X_test_selected.shape}")
+    print(f"{'='*80}\n")
+
+    # Return both - Kedro will save them as CSV files!
+    return X_train_selected, X_test_selected
+
+
+# ============================================================================
+# PIPELINE DEFINITION (WITH THE NEW FEATURE SELECTION NODE!)
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Create feature engineering pipeline."""
+    """Create feature engineering pipeline WITH feature selection node."""
     return Pipeline(
         [
+            # Node 1: Feature engineering (creates X_train_final, X_test_final)
             node(
                 func=engineer_features,
                 inputs=["X_train", "X_test", "params:feature_engineering"],
                 outputs=["X_train_final", "X_test_final"],
                 name="engineer_features",
                 tags="fe",
+            ),
+
+            # Node 2: FEATURE SELECTION (creates X_train_selected, X_test_selected)
+            # THIS IS THE MISSING NODE THAT FIXES THE ERROR!
+            node(
+                func=feature_selection,
+                inputs=["X_train_final", "X_test_final", "y_train", "params:feature_selection"],
+                outputs=["X_train_selected", "X_test_selected"],
+                name="feature_selection",
+                tags="fs",
             ),
         ]
     )
@@ -656,3 +703,4 @@ if __name__ == "__main__":
     print("      • Polynomial feature explosion (degree control)")
     print("      • Low-variance features (automatic filtering)")
     print("      • Feature explosion validation (safety checks)")
+    print("      • FEATURE SELECTION (Creates selected datasets) ✨")
