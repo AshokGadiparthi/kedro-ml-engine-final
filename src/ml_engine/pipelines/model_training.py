@@ -114,7 +114,7 @@ def scale_features(
 
             # Apply SMOTE
             log.info(f"\nApplying SMOTE to balance classes...")
-            smote = SMOTE(random_state=42, n_jobs=-1, k_neighbors=5)
+            smote = SMOTE(random_state=42, k_neighbors=5)
             X_train_smote, y_train_smote = smote.fit_resample(X_train_scaled, y_train)
 
             # Convert back to DataFrame
