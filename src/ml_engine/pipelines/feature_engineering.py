@@ -666,14 +666,13 @@ def feature_selection(
 
 
 # ============================================================================
-# PIPELINE DEFINITION (WITH THE NEW FEATURE SELECTION NODE!)
+# PIPELINE DEFINITION - CLEAN & SIMPLE (NO DUPLICATE NODES!)
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Create feature engineering pipeline WITH feature selection node."""
+    """Create feature engineering pipeline with feature selection node."""
     return Pipeline(
         [
-            # Node 1: Feature engineering (creates X_train_final, X_test_final)
             node(
                 func=engineer_features,
                 inputs=["X_train", "X_test", "params:feature_engineering"],
@@ -681,9 +680,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="engineer_features",
                 tags="fe",
             ),
-
-            # Node 2: FEATURE SELECTION (creates X_train_selected, X_test_selected)
-            # THIS IS THE MISSING NODE THAT FIXES THE ERROR!
             node(
                 func=feature_selection,
                 inputs=["X_train_final", "X_test_final", "y_train", "params:feature_selection"],
