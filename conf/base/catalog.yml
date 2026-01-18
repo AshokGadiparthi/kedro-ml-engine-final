@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# FINAL SOLUTION CATALOG - NO BRACKET SYNTAX
+# FINAL SOLUTION CATALOG - WITH PERMANENT FEATURE ENGINEERING FIXES
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +68,23 @@ train_test_split_config:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/train_test_split_config.pkl
 
+# ════════════════════════════════════════════════════════════════════════════
+# ⭐ NEW: INPUT DATASETS FOR PRODUCTION_FEATURE_ENGINEERING.py
+# These are aliases for X_train_raw and X_test_raw that the pipeline expects
+# ════════════════════════════════════════════════════════════════════════════
+
+X_train:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/03_primary/X_train_raw.csv
+  save_args:
+    index: false
+
+X_test:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/03_primary/X_test_raw.csv
+  save_args:
+    index: false
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PHASE 2: FEATURE ENGINEERING (Processing & Outputs)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -117,6 +134,20 @@ X_train_engineered:
 X_test_engineered:
   type: pandas.csv_dataset.CSVDataset
   filepath: data/03_primary/X_test_engineered.csv
+  save_args:
+    index: false
+
+# ⭐ NEW: OUTPUT DATASETS FROM PRODUCTION_FEATURE_ENGINEERING.py
+# These contain the engineered features with ALL permanent fixes applied
+X_train_final:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/03_primary/X_train_final.csv
+  save_args:
+    index: false
+
+X_test_final:
+  type: pandas.csv_dataset.CSVDataset
+  filepath: data/03_primary/X_test_final.csv
   save_args:
     index: false
 
