@@ -1,8 +1,9 @@
 """
-PHASE 3: MODEL TRAINING & EVALUATION (FIXED)
+PHASE 3: MODEL TRAINING & EVALUATION (ULTRA-FIXED)
 ================================================================================
-Fixed version that correctly reads problem_type from Phase 2 output
-Inputs: X_train_selected, X_test_selected, y_train, y_test, problem_type
+Completely independent - auto-detects problem type from y_train
+No dependencies on problem_type from Phase 2 catalog
+Inputs: X_train_selected, X_test_selected, y_train, y_test (ONLY)
 Outputs: baseline_model, best_model, model_evaluation, phase3_predictions
 ================================================================================
 """
@@ -26,36 +27,32 @@ log = logging.getLogger(__name__)
 
 
 # ============================================================================
-# PHASE 3.1: ENSURE PROBLEM TYPE IS STRING
+# PHASE 3.1: DETECT PROBLEM TYPE FROM TARGET
 # ============================================================================
 
-def ensure_problem_type_string(problem_type: Any) -> str:
+def detect_problem_type_from_target(y_train: pd.Series) -> str:
     """
-    Ensure problem_type is a clean string value
-    Handles if it comes as dict, object, or already a string
+    Auto-detect classification vs regression from target variable ONLY
+    No catalog dependencies
     """
     log.info("="*80)
-    log.info("PHASE 3.1: ENSURING PROBLEM TYPE IS VALID STRING")
+    log.info("PHASE 3.1: DETECTING PROBLEM TYPE FROM TARGET")
     log.info("="*80)
 
-    # If it's a dict (from problem_type_result), extract the value
-    if isinstance(problem_type, dict):
-        log.info(f"Problem type is dict: {problem_type}")
-        if 'problem_type' in problem_type:
-            problem_type = problem_type['problem_type']
-        else:
-            # Get first value if it's a dict
-            problem_type = list(problem_type.values())[0] if problem_type else 'classification'
+    # Check unique values
+    n_unique = y_train.nunique()
+    unique_ratio = n_unique / len(y_train)
 
-    # Convert to string and clean
-    problem_type = str(problem_type).lower().strip()
+    log.info(f"🔍 Target stats: {n_unique} unique values, {unique_ratio:.2%} ratio")
 
-    # Validate
-    if problem_type not in ['classification', 'regression']:
-        log.warning(f"Unknown problem type: {problem_type}, defaulting to classification")
+    # Classification: object/bool type or <20 unique values with <10% ratio
+    if y_train.dtype in ['object', 'bool', 'category'] or (n_unique < 20 and unique_ratio < 0.1):
         problem_type = 'classification'
+        log.info("✅ Detected: CLASSIFICATION")
+    else:
+        problem_type = 'regression'
+        log.info("✅ Detected: REGRESSION")
 
-    log.info(f"✅ Problem type: {problem_type}")
     return problem_type
 
 
@@ -66,18 +63,17 @@ def ensure_problem_type_string(problem_type: Any) -> str:
 def train_baseline_model(
         X_train: pd.DataFrame,
         y_train: pd.Series,
-        problem_type: str,
         params: Dict[str, Any]
-) -> Tuple[object, Dict[str, float]]:
+) -> Tuple[object, Dict[str, float], str]:
     """
-    Train simple baseline model for comparison
+    Train simple baseline model and return problem_type
     """
     log.info("="*80)
     log.info("PHASE 3.2: TRAINING BASELINE MODEL")
     log.info("="*80)
 
-    # Ensure problem_type is string
-    problem_type = ensure_problem_type_string(problem_type)
+    # Detect problem type
+    problem_type = detect_problem_type_from_target(y_train)
 
     if problem_type == 'classification':
         log.info("🎯 Training LogisticRegression baseline...")
@@ -96,7 +92,7 @@ def train_baseline_model(
         log.info(f"✅ Baseline train R²: {r2:.4f}, RMSE: {rmse:.4f}")
         metrics = {'r2': float(r2), 'rmse': float(rmse)}
 
-    return baseline, metrics
+    return baseline, metrics, problem_type
 
 
 # ============================================================================
@@ -115,9 +111,6 @@ def hyperparameter_tuning(
     log.info("="*80)
     log.info("PHASE 3.3: HYPERPARAMETER TUNING WITH GRIDSEARCHCV")
     log.info("="*80)
-
-    # Ensure problem_type is string
-    problem_type = ensure_problem_type_string(problem_type)
 
     cv_folds = 5
 
@@ -183,9 +176,6 @@ def evaluate_model(
     log.info("="*80)
     log.info("PHASE 3.4: COMPREHENSIVE MODEL EVALUATION")
     log.info("="*80)
-
-    # Ensure problem_type is string
-    problem_type = ensure_problem_type_string(problem_type)
 
     y_train_pred = model.predict(X_train)
     y_test_pred = model.predict(X_test)
@@ -254,9 +244,6 @@ def save_model_and_evaluation(
     log.info("PHASE 3.5: SAVING MODEL & EVALUATION METRICS")
     log.info("="*80)
 
-    # Ensure problem_type is string
-    problem_type = ensure_problem_type_string(problem_type)
-
     import os
     os.makedirs('data/06_models', exist_ok=True)
 
@@ -291,9 +278,6 @@ def make_predictions(
     log.info("="*80)
     log.info("PHASE 3.6: MAKING PREDICTIONS")
     log.info("="*80)
-
-    # Ensure problem_type is string
-    problem_type = ensure_problem_type_string(problem_type)
 
     predictions = model.predict(X_test)
 
@@ -334,12 +318,16 @@ def create_pipeline(**kwargs) -> Pipeline:
     """
     Complete Phase 3 pipeline: Model Training & Evaluation
 
+    ULTRA-FIXED VERSION:
+    - No catalog dependencies on problem_type
+    - Auto-detects from y_train
+    - Completely independent of Phase 2
+
     Inputs (from Phase 2):
       - X_train_selected: Final engineered features
       - X_test_selected: Final engineered features
       - y_train: Training target
       - y_test: Test target
-      - problem_type: 'classification' or 'regression' (from Phase 2)
 
     Outputs:
       - baseline_model, baseline_metrics
@@ -351,8 +339,8 @@ def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline([
         node(
             func=train_baseline_model,
-            inputs=["X_train_selected", "y_train", "problem_type", "params:problem_type"],
-            outputs=["baseline_model", "baseline_metrics"],
+            inputs=["X_train_selected", "y_train", "params:problem_type"],
+            outputs=["baseline_model", "baseline_metrics", "problem_type"],
             name="phase3_train_baseline"
         ),
 

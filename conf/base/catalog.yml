@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# FIXED DATA CATALOG - SOLVES problem_type MISMATCH
+# ULTRA-FIXED DATA CATALOG - REMOVES ALL problem_type ISSUES
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,7 +64,6 @@ y_test:
   save_args:
     index: false
 
-# Split configuration (CRITICAL for Data Leakage Prevention)
 train_test_split_config:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/train_test_split_config.pkl
@@ -164,19 +163,12 @@ selected_features:
   filepath: data/08_reporting/selected_features.pkl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE 2: PROBLEM TYPE DETECTION (CRITICAL - FROM PHASE 2)
+# PHASE 2: PROBLEM TYPE DETECTION
+# NOTE: THIS COMES FROM PHASE 2 - PHASE 3 WILL DETECT IT INDEPENDENTLY
 # ─────────────────────────────────────────────────────────────────────────────
-# NOTE: problem_type output comes from Phase 2 feature_selection pipeline
-# Phase 3 will read this value
 
-problem_type:
-  type: text.text_dataset.TextDataset
-  filepath: data/08_reporting/problem_type.txt
-
-# Also preserve the result dictionary if Phase 2 outputs it
-problem_type_result:
-  type: pickle.pickle_dataset.PickleDataset
-  filepath: data/08_reporting/problem_type_result.pkl
+# Removed problematic problem_type_result entries
+# Phase 3 will auto-detect problem type from y_train
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PHASE 1: DATA SUMMARY
@@ -189,9 +181,6 @@ data_summary:
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 3: MODEL TRAINING & EVALUATION (NEW)
 # ════════════════════════════════════════════════════════════════════════════
-
-# Problem type (input from Phase 2, used by Phase 3)
-# This is a simple string: "classification" or "regression"
 
 # Baseline models
 baseline_model:
