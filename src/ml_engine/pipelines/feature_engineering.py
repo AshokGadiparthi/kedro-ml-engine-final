@@ -14,15 +14,15 @@ This module:
 ✅ Handles sparse matrices for large feature sets
 ✅ Includes safeguards against feature explosion
 ✅ Production-tested and maintainable
-✅ FEATURE SELECTION NODE (Creates X_train_selected & X_test_selected)
 
 Key Design Principles:
 1. DROP ID columns first (customerID, user_id, etc.)
 2. ENCODE categoricals smartly (only useful ones)
 3. LIMIT interactions (only important combinations)
 4. SCALE appropriately (numeric vs categorical)
-5. SELECT best features using SelectKBest
-6. VALIDATE output (never > 1000 features without explicit approval)
+5. VALIDATE output (never > 1000 features without explicit approval)
+
+NOTE: Feature selection is handled by separate feature_selection.py pipeline
 """
 
 import pandas as pd
@@ -31,7 +31,7 @@ from sklearn.preprocessing import (
     OneHotEncoder, StandardScaler, LabelEncoder,
     PolynomialFeatures, MinMaxScaler
 )
-from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_classif, f_regression
+from sklearn.feature_selection import VarianceThreshold
 from typing import Dict, Any, Tuple, List
 import logging
 import warnings
@@ -572,105 +572,11 @@ def engineer_features(
 
 
 # ============================================================================
-# NEW: FEATURE SELECTION NODE - Creates X_train_selected & X_test_selected
-# ============================================================================
-
-def feature_selection(
-        X_train_engineered: pd.DataFrame,
-        X_test_engineered: pd.DataFrame,
-        y_train: pd.Series,
-        params: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    FEATURE SELECTION NODE
-
-    THIS NODE CREATES X_train_selected AND X_test_selected
-    This was the MISSING CODE causing X_test_selected.csv error!
-
-    Uses SelectKBest to select top K features based on target relationship.
-
-    Args:
-        X_train_engineered: Engineered features from Phase 2
-        X_test_engineered: Engineered test features
-        y_train: Target variable
-        params: Configuration (n_features_to_select, method)
-
-    Returns:
-        (X_train_selected, X_test_selected) → Creates CSV files
-    """
-    print(f"\n{'='*80}")
-    print(f"🎯 FEATURE SELECTION NODE (Creates selected datasets)")
-    print(f"{'='*80}")
-
-    # Handle DataFrame input for y_train
-    if isinstance(y_train, pd.DataFrame):
-        y_train = y_train.iloc[:, 0]
-
-    # Get parameters
-    n_features = params.get('n_features_to_select', 10)
-    method = params.get('feature_selection_method', 'kbest')
-
-    print(f"\n   Input features: {X_train_engineered.shape[1]}")
-    print(f"   Selecting: {n_features} features")
-    print(f"   Method: {method}")
-
-    # Determine problem type (classification vs regression)
-    n_unique = y_train.nunique()
-    is_classification = n_unique < 20
-
-    if is_classification:
-        score_func = f_classif
-        problem_type = "Classification"
-    else:
-        score_func = f_regression
-        problem_type = "Regression"
-
-    print(f"   Problem type: {problem_type}")
-
-    # Create selector
-    k = min(n_features, X_train_engineered.shape[1])
-    selector = SelectKBest(score_func=score_func, k=k)
-
-    # FIT on training data
-    print(f"\n   Fitting SelectKBest on training data...")
-    X_train_selected_array = selector.fit_transform(X_train_engineered, y_train)
-
-    # Get selected feature names
-    selected_features = X_train_engineered.columns[selector.get_support()].tolist()
-
-    # Create output DataFrames
-    X_train_selected = pd.DataFrame(
-        X_train_selected_array,
-        columns=selected_features,
-        index=X_train_engineered.index
-    )
-
-    # TRANSFORM test data with same features
-    print(f"   Transforming test data with selected features...")
-    X_test_selected_array = selector.transform(X_test_engineered)
-    X_test_selected = pd.DataFrame(
-        X_test_selected_array,
-        columns=selected_features,
-        index=X_test_engineered.index
-    )
-
-    print(f"\n   ✅ Selected {X_train_selected.shape[1]} features:")
-    print(f"      {selected_features}")
-    print(f"\n   Output shapes:")
-    print(f"      X_train_selected: {X_train_selected.shape}")
-    print(f"      X_test_selected: {X_test_selected.shape}")
-    print(f"{'='*80}\n")
-
-    # Return both - Kedro will save them as CSV files!
-    return X_train_selected, X_test_selected
-
-
-# ============================================================================
-# PIPELINE DEFINITION - CLEAN & SIMPLE (NO DUPLICATE NODES!)
+# PIPELINE DEFINITION - ENGINEER FEATURES ONLY
 # ============================================================================
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Create feature engineering pipeline with feature selection node."""
+    """Create feature engineering pipeline (engineer_features node only)."""
     return Pipeline(
         [
             node(
@@ -679,13 +585,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs=["X_train_final", "X_test_final"],
                 name="engineer_features",
                 tags="fe",
-            ),
-            node(
-                func=feature_selection,
-                inputs=["X_train_final", "X_test_final", "y_train", "params:feature_selection"],
-                outputs=["X_train_selected", "X_test_selected"],
-                name="feature_selection",
-                tags="fs",
             ),
         ]
     )
@@ -699,4 +598,5 @@ if __name__ == "__main__":
     print("      • Polynomial feature explosion (degree control)")
     print("      • Low-variance features (automatic filtering)")
     print("      • Feature explosion validation (safety checks)")
-    print("      • FEATURE SELECTION (Creates selected datasets) ✨")
+    print("")
+    print("   Note: Feature selection is handled by feature_selection.py pipeline")
