@@ -129,9 +129,9 @@ def get_classification_algorithms() -> Dict[str, object]:
     algorithms = {
         'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
         'RidgeClassifier': RidgeClassifier(random_state=42),
-        'SGDClassifier': SGDClassifier(random_state=42, n_jobs=-1),
-        'PassiveAggressiveClassifier': PassiveAggressiveClassifier(random_state=42, n_jobs=-1),
-        'Perceptron': Perceptron(random_state=42, n_jobs=-1),
+        'SGDClassifier': SGDClassifier(random_state=42),
+        'PassiveAggressiveClassifier': PassiveAggressiveClassifier(random_state=42),
+        'Perceptron': Perceptron(random_state=42),
         'DecisionTreeClassifier': DecisionTreeClassifier(max_depth=10, random_state=42),
         'RandomForestClassifier': RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1),
         'ExtraTreesClassifier': ExtraTreesClassifier(n_estimators=100, random_state=42, n_jobs=-1),
@@ -197,7 +197,6 @@ def get_classification_algorithms() -> Dict[str, object]:
     # Stacking Classifier with OPTION D class weighting
     try:
         from sklearn.ensemble import StackingClassifier
-        from sklearn.linear_model import LogisticRegression
 
         stack_estimators = [
             ('rf', RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1)),
@@ -207,8 +206,7 @@ def get_classification_algorithms() -> Dict[str, object]:
         algorithms['StackingClassifier'] = StackingClassifier(
             estimators=stack_estimators,
             final_estimator=LogisticRegression(max_iter=1000),
-            cv=5,
-            n_jobs=-1
+            cv=5
         )
         log.info("✅ StackingClassifier loaded")
     except Exception as e:
