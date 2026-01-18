@@ -1,17 +1,9 @@
 """
-PERFECT PHASE 2 - FEATURE SELECTION WITH REAL TARGET (ULTRA-FIXED)
+COMPLETE FINAL PHASE 2 - FEATURE SELECTION WITH REAL TARGET (DICT TO DATAFRAME FIX)
 =====================================================================
 Replaces: src/ml_engine/pipelines/feature_selection.py
 
-Fixes:
-  ✅ Gap 2: Problem type detection (classification vs regression)
-  ✅ Gap 5: Uses REAL target (not fake random target!)
-  ✅ Handles correlation-based and importance-based selection
-  ✅ Multiple feature importance methods
-  ✅ FIXED: Removed bracket syntax error
-  ✅ ULTRA-FIXED: Handles y_train as DataFrame or Series
-
-Key: Uses ACTUAL target data, not np.random.randint()!
+CRITICAL FIX: Convert dicts to DataFrames for CSV saving
 =====================================================================
 """
 
@@ -31,7 +23,7 @@ log = logging.getLogger(__name__)
 # ============================================================================
 
 def detect_problem_type(
-        y: pd.DataFrame,  # Changed from Series to DataFrame (y_train is a CSV)
+        y: pd.DataFrame,
         params: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
@@ -53,7 +45,7 @@ def detect_problem_type(
     # Convert DataFrame to Series if needed
     if isinstance(y, pd.DataFrame):
         print(f"   Converting DataFrame to Series...")
-        y = y.iloc[:, 0]  # Take first column
+        y = y.iloc[:, 0]
         print(f"   ✅ Converted")
 
     # Check for manual override
@@ -120,19 +112,19 @@ def detect_problem_type(
 
 # ============================================================================
 # GAP 5 FIX: USE REAL TARGET FOR FEATURE IMPORTANCE
+# CRITICAL: Return DataFrame for CSV, not dict!
 # ============================================================================
 
 def calculate_feature_importance_with_real_target(
         X_train: pd.DataFrame,
-        y_train: pd.DataFrame,  # Changed from Series to DataFrame
+        y_train: pd.DataFrame,
         problem_type_result: Dict[str, Any],
         params: Dict[str, Any]
-) -> Tuple[Dict[str, float], Dict[str, Any]]:
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Calculate feature importance using REAL target (Gap 5 Fix).
 
-    CRITICAL: Uses actual y_train, NOT fake random target!
-    ULTRA-FIXED: Handles y_train as DataFrame
+    CRITICAL FIX: Returns DataFrame (not dict) as first output for CSV saving!
 
     Args:
         X_train: Training features
@@ -141,13 +133,15 @@ def calculate_feature_importance_with_real_target(
         params: Configuration
 
     Returns:
-        (importance_dict, importance_config)
+        (importance_dataframe, importance_config)
+        - importance_dataframe: DataFrame with rank, feature, importance (for CSV)
+        - importance_config: Dict with metadata
     """
     print(f"\n{'='*80}")
     print(f"🏆 FEATURE IMPORTANCE WITH REAL TARGET (Gap 5 Fix)")
     print(f"{'='*80}")
 
-    # FIXED: Extract problem_type from dict (not bracket syntax!)
+    # Extract problem_type from dict (not bracket syntax!)
     problem_type = problem_type_result["problem_type"]
 
     # Convert DataFrame to Series if needed
@@ -227,9 +221,19 @@ def calculate_feature_importance_with_real_target(
         bar = "█" * int(imp / 5)
         print(f"      {i:2d}. {feat:30s} {imp:6.2f}% {bar}")
 
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # CRITICAL FIX: Convert dict to DataFrame for CSV saving
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    importance_df = pd.DataFrame([
+        {"feature": name, "importance": imp}
+        for name, imp in importance_dict.items()
+    ]).reset_index(drop=True)
+    importance_df.insert(0, "rank", range(1, len(importance_df) + 1))
+
     print(f"{'='*80}\n")
 
-    return importance_dict, {
+    # Return DataFrame (not dict!) as first output
+    return importance_df, {
         'method': method,
         'model': model,
         'features': X_train.columns.tolist(),
@@ -286,7 +290,7 @@ def select_features_by_correlation(
 
 def select_top_features_by_importance(
         X_train: pd.DataFrame,
-        feature_importance: Dict[str, float],
+        feature_importance: pd.DataFrame,  # NOW RECEIVES DATAFRAME!
         params: Dict[str, Any]
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
@@ -294,7 +298,7 @@ def select_top_features_by_importance(
 
     Args:
         X_train: Training features
-        feature_importance: Importance scores
+        feature_importance: DataFrame with importance scores (not dict!)
         params: Configuration
 
     Returns:
@@ -304,15 +308,15 @@ def select_top_features_by_importance(
 
     top_k = params.get('top_k', 20)
 
-    # Get top K features
-    sorted_features = list(feature_importance.keys())[:top_k]
+    # Get top K features from DataFrame
+    sorted_features = feature_importance['feature'].head(top_k).tolist()
     X_selected = X_train[sorted_features]
 
     print(f"   Top K: {top_k}")
     print(f"   Selected {len(sorted_features)} features")
     print(f"\n   Selected Features:")
     for i, feat in enumerate(sorted_features, 1):
-        imp = feature_importance[feat]
+        imp = feature_importance[feature_importance['feature'] == feat]['importance'].values[0]
         print(f"      {i:2d}. {feat:30s} ({imp:6.2f}%)")
 
     print(f"\n   ✅ Selection complete")
@@ -358,21 +362,24 @@ def combine_selected_features(
 
 def log_feature_selection_summary(
         X_train_final: pd.DataFrame,
-        feature_importance: Dict[str, float],
+        feature_importance: pd.DataFrame,  # NOW RECEIVES DATAFRAME!
         params: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Log feature selection summary."""
-    summary = {
-        'final_feature_count': X_train_final.shape[1],
-        'selected_features': X_train_final.columns.tolist(),
-        'top_features': list(feature_importance.keys())[:10],
-    }
+) -> pd.DataFrame:  # RETURN DATAFRAME
+    """
+    Log feature selection summary.
+
+    CRITICAL: Returns DataFrame (not dict) for fs_summary output
+    """
+    summary_df = pd.DataFrame({
+        'final_feature_count': [X_train_final.shape[1]],
+        'total_features_evaluated': [len(feature_importance)]
+    })
 
     log.info(f"\n🏆 Feature Selection Summary:")
-    log.info(f"   Final feature count: {summary['final_feature_count']}")
-    log.info(f"   Top 5 features: {summary['top_features'][:5]}")
+    log.info(f"   Final feature count: {X_train_final.shape[1]}")
+    log.info(f"   Top 5 features: {feature_importance['feature'].head(5).tolist()}")
 
-    return summary
+    return summary_df
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -396,10 +403,11 @@ def create_pipeline(**kwargs) -> Pipeline:
                 tags="fs",
             ),
             # Feature Importance with Real Target (Gap 5) - FIXED: No bracket syntax!
+            # CRITICAL: Now returns DataFrame as first output!
             node(
                 func=calculate_feature_importance_with_real_target,
                 inputs=["X_train_final", "y_train", "problem_type_result", "params:feature_selection"],
-                outputs=["feature_importance", "importance_config"],
+                outputs=["feature_importance", "importance_config"],  # feature_importance is now DataFrame
                 name="calculate_feature_importance_with_real_target",
                 tags="fs",
             ),
@@ -411,10 +419,10 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="select_features_by_correlation",
                 tags="fs",
             ),
-            # Importance-based Selection
+            # Importance-based Selection (receives DataFrame now!)
             node(
                 func=select_top_features_by_importance,
-                inputs=["X_train_final", "feature_importance", "params:feature_selection"],
+                inputs=["X_train_final", "feature_importance", "params:feature_selection"],  # feature_importance is DataFrame
                 outputs=["X_train_importance", "importance_selection_config"],
                 name="select_top_features_by_importance",
                 tags="fs",
@@ -427,7 +435,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="combine_selected_features",
                 tags="fs",
             ),
-            # Summary
+            # Summary (now returns DataFrame!)
             node(
                 func=log_feature_selection_summary,
                 inputs=["X_train_selected", "feature_importance", "params:feature_selection"],
@@ -440,7 +448,7 @@ def create_pipeline(**kwargs) -> Pipeline:
 
 
 if __name__ == "__main__":
-    print("✅ Perfect Phase 2 Feature Selection pipeline created!")
+    print("✅ Complete Final Phase 2 Feature Selection pipeline created!")
     print("   • Uses REAL target for importance (Gap 5 Fix)")
     print("   • Detects problem type robustly (Gap 2 Fix)")
-    print("   • ULTRA-FIXED: Handles DataFrame/Series correctly!")
+    print("   • CRITICAL: Returns DataFrames for CSV saving (Dict→DataFrame fix)")
