@@ -64,6 +64,11 @@ y_test:
   save_args:
     index: false
 
+y_train_balanced:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/03_primary/y_train_balanced.pkl
+
+
 train_test_split_config:
   type: pickle.pickle_dataset.PickleDataset
   filepath: data/08_reporting/train_test_split_config.pkl
@@ -112,6 +117,10 @@ X_test_scaled:
   filepath: data/03_primary/X_test_scaled.csv
   save_args:
     index: false
+
+scalers:
+  type: pickle.pickle_dataset.PickleDataset
+  filepath: data/03_primary/scalers.pkl
 
 X_train_encoded:
   type: pandas.csv_dataset.CSVDataset
