@@ -432,9 +432,18 @@ def phase4_create_ensemble_voting(
     log.info("🎯 CREATING ENSEMBLE VOTING CLASSIFIER (PATH A)")
     log.info("="*80)
 
-    # Get top 5 models
-    top_5 = results_df.nlargest(5, 'Test_Score')['Algorithm'].tolist()
-    log.info(f"Selected top 5 models for ensemble:")
+    # Get top 5 models - Filter out incompatible models (CatBoost, LightGBM) from ensemble
+    top_5_all = results_df.nlargest(5, 'Test_Score')['Algorithm'].tolist()
+
+    # Remove CatBoost and LightGBM as they have sklearn compatibility issues with voting ensemble
+    top_5 = [name for name in top_5_all if 'CatBoost' not in name and 'LGBM' not in name]
+
+    # If we removed too many, include them anyway
+    if len(top_5) < 3:
+        log.warning(f"⚠️ After filtering, only {len(top_5)} compatible models found. Using all top 5.")
+        top_5 = top_5_all
+
+    log.info(f"Selected top {len(top_5)} models for ensemble:")
     for i, name in enumerate(top_5, 1):
         log.info(f"  {i}. {name}")
 
@@ -443,13 +452,43 @@ def phase4_create_ensemble_voting(
     best_model = trained_models[best_model_name]
     log.info(f"\n✅ Best model selected for PATH C: {best_model_name}")
 
-    # Create voting models
+    # Create voting models from already-filtered top_5
     top_models_dict = {name: trained_models[name] for name in top_5 if name in trained_models}
 
     if problem_type == 'classification':
-        ensemble = VotingClassifier(estimators=list(top_models_dict.items()), voting='soft', n_jobs=-1)
+        try:
+            ensemble = VotingClassifier(estimators=list(top_models_dict.items()), voting='soft', n_jobs=-1)
+        except (AttributeError, TypeError) as e:
+            log.warning(f"⚠️ Ensemble creation failed with error: {str(e)[:80]}...")
+            # Retry without CatBoost/LightGBM which have sklearn compatibility issues
+            cleaned_models = {
+                name: model
+                for name, model in top_models_dict.items()
+                if 'CatBoost' not in name and 'LGBM' not in name
+            }
+            if cleaned_models:
+                log.info(f"Retrying ensemble with {len(cleaned_models)} compatible models...")
+                ensemble = VotingClassifier(estimators=list(cleaned_models.items()), voting='soft', n_jobs=-1)
+            else:
+                log.error("❌ No compatible models for ensemble!")
+                raise
     else:
-        ensemble = VotingRegressor(estimators=list(top_models_dict.items()), n_jobs=-1)
+        try:
+            ensemble = VotingRegressor(estimators=list(top_models_dict.items()), n_jobs=-1)
+        except (AttributeError, TypeError) as e:
+            log.warning(f"⚠️ Ensemble creation failed with error: {str(e)[:80]}...")
+            # Retry without CatBoost/LightGBM
+            cleaned_models = {
+                name: model
+                for name, model in top_models_dict.items()
+                if 'CatBoost' not in name and 'LGBM' not in name
+            }
+            if cleaned_models:
+                log.info(f"Retrying ensemble with {len(cleaned_models)} compatible models...")
+                ensemble = VotingRegressor(estimators=list(cleaned_models.items()), n_jobs=-1)
+            else:
+                log.error("❌ No compatible models for ensemble!")
+                raise
 
     # Train ensemble
     log.info("Training ensemble...")
