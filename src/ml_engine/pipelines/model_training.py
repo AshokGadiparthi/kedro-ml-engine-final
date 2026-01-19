@@ -578,7 +578,7 @@ def create_pipeline(**kwargs) -> Pipeline:
 
         node(
             func=evaluate_model,
-            inputs=["best_model", "X_train_scaled", "X_test_scaled", "y_train", "y_test", "problem_type"],
+            inputs=["best_model", "X_train_scaled", "X_test_scaled", "y_train_balanced", "y_test", "problem_type"],
             outputs="model_evaluation",
             name="phase3_evaluate_model"
         ),
