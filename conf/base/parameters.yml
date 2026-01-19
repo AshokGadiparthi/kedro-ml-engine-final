@@ -1,6 +1,7 @@
 # ════════════════════════════════════════════════════════════════════════════
-# COMPLETE PARAMETERS - PHASES 1, 2, 3 & 4 (100% INTEGRATED)
-# INCLUDES: ALL EXISTING CONFIGURATION + PERMANENT FEATURE EXPLOSION FIXES
+# COMPLETE PARAMETERS - PHASES 1-6 (100% INTEGRATED)
+# ════════════════════════════════════════════════════════════════════════════
+# Added: Phase 6 (Ensemble Methods) configuration
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -41,24 +42,13 @@ validation:
 # ════════════════════════════════════════════════════════════════════════════
 # FEATURE ENGINEERING (Phase 2) - WITH PERMANENT EXPLOSION FIXES
 # ════════════════════════════════════════════════════════════════════════════
-# NEW: Integrated 5 permanent fixes for feature explosion
-# WHAT'S NEW:
-#   • Fix #1: Automatic ID column detection & dropping
-#   • Fix #2: Smart categorical encoding (cardinality-based)
-#   • Fix #3: Controlled polynomial features (safe defaults)
-#   • Fix #4: Variance-based filtering (auto-remove noise)
-#   • Fix #5: Explosion safety validation (hard limits)
-# ════════════════════════════════════════════════════════════════════════════
 
 feature_engineering:
 
   # ===== FIX #1: ID COLUMN AUTO-DETECTION =====
-  # Automatically identify and DROP ID columns before encoding
-  # This prevents one-hot encoding of high-cardinality IDs (customerID → 7,000+ features!)
-
-  drop_id_columns: true                    # Enable ID detection & removal
-  id_cardinality_threshold: 0.95           # Consider >95% unique values as ID
-  id_keywords:                             # Keywords to identify ID columns
+  drop_id_columns: true
+  id_cardinality_threshold: 0.95
+  id_keywords:
     - 'id'
     - 'uid'
     - 'customer'
@@ -67,69 +57,51 @@ feature_engineering:
     - 'reference'
 
   # ===== FIX #3: CONTROLLED POLYNOMIAL FEATURES =====
-  # Safe polynomial feature creation with strict limits
-
-  polynomial_degree: 2                     # Max degree (keep ≤ 2, higher = explosion!)
+  polynomial_degree: 2
   include_bias: false
-  polynomial_features: false               # DISABLED by default (enable only if needed)
-  max_polynomial_features: 50              # Hard limit on polynomial output features
-  max_output_features: 100                 # Overall feature engineering limit
+  polynomial_features: false
+  max_polynomial_features: 50
+  max_output_features: 100
 
   # ===== FIX #4: VARIANCE-BASED FILTERING =====
-  # Automatically remove low-variance (near-constant) features
-
-  variance_threshold: 0.01                 # Remove features with variance < 0.01
-  apply_variance_filter: true              # Enable variance-based filtering
+  variance_threshold: 0.01
+  apply_variance_filter: true
 
   # ===== FIX #5: EXPLOSION SAFETY VALIDATION =====
-  # Hard limit to prevent feature explosion from going unnoticed
-
-  max_features_allowed: 500                # HARD LIMIT: Raise error if exceeded
-  validate_feature_count: true             # Enable validation
+  max_features_allowed: 500
+  validate_feature_count: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CATEGORICAL HANDLING (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
-# UPDATED: Works with Fix #2 (Smart Categorical Encoding)
-# ════════════════════════════════════════════════════════════════════════════
-# FIX #2: SMART CATEGORICAL ENCODING
-# Prevents one-hot encoding explosion by using cardinality-based strategy:
-#   ≤10 unique values → one-hot encode (creates N-1 features)
-#   11-50 unique values → label encode (creates 1 feature)
-#   >50 unique values → drop (likely not useful)
-# ════════════════════════════════════════════════════════════════════════════
 
 categorical:
-  encoding_method: "smart"             # NEW: "smart" uses cardinality-based strategy
-  # Options: "smart", "onehot", "label", "target", "frequency"
-
-  # Smart encoding configuration (for encoding_method: "smart")
-  max_categories_to_onehot: 10         # One-hot encode only if ≤ this many categories
-  max_categories_to_label: 50          # Label encode if 11-50 unique values
-  max_features_from_encoding: 100      # Hard limit on features from categorical encoding
-
+  encoding_method: "smart"
+  max_categories_to_onehot: 10
+  max_categories_to_label: 50
+  max_features_from_encoding: 100
   handle_unknown: "ignore"
   min_frequency: 1
-  drop_first_category: true            # Drop first category to avoid multicollinearity
+  drop_first_category: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCALING & NORMALIZATION (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 scaling:
-  method: "standard"                   # Options: "standard", "minmax", "robust"
-  scale_numeric_only: true             # Only scale numeric features
+  method: "standard"
+  scale_numeric_only: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FEATURE SELECTION (Phase 2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 feature_selection:
-  method: "importance"                 # Options: "variance", "correlation", "importance", "mutual_info"
-  n_features: 10                       # Select top N features
+  method: "importance"
+  n_features: 10
   test_size: 0.2
-  correlation_threshold: 0.95          # Remove features with correlation > 0.95
-  importance_method: 'tree'            # 'tree' (fast) or 'permutation' (accurate)
+  correlation_threshold: 0.95
+  importance_method: 'tree'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PROBLEM TYPE DETECTION (Phase 2 & 3)
@@ -137,41 +109,35 @@ feature_selection:
 
 problem_type:
   auto_detect: true
-  override: null                       # Set to "classification" or "regression" to override
+  override: null
 
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 3: MODEL TRAINING & EVALUATION
 # ════════════════════════════════════════════════════════════════════════════
 
 model_training:
-  # Cross-validation folds for hyperparameter tuning
   cv_folds: 5
   random_state: 42
-  n_jobs: -1                           # -1 = use all processors
+  n_jobs: -1
 
-  # Baseline model settings
   baseline:
-    use_baseline: true                 # Train baseline for comparison
+    use_baseline: true
 
-  # Hyperparameter tuning settings
   hyperparameter_tuning:
     cv_folds: 5
-    scoring: null                      # null = auto-select based on problem type
+    scoring: null
     n_iter_search: 10
 
-  # Evaluation settings
   evaluation:
     compute_feature_importance: true
     log_classification_report: true
-    check_overfitting: true            # Alert if overfit_gap > 0.1
+    check_overfitting: true
 
-  # Classification hyperparameters
   classification:
     n_estimators: [50, 100]
     max_depth: [5, 10, 15]
     min_samples_split: [2, 5]
 
-  # Regression hyperparameters
   regression:
     n_estimators: [50, 100]
     learning_rate: [0.01, 0.1]
@@ -182,40 +148,90 @@ model_training:
 # ════════════════════════════════════════════════════════════════════════════
 
 algorithms:
-  # Total algorithms to train (null = all available)
   max_algorithms: null
 
-  # Algorithm categories to use
   use_regression_algorithms: true
   use_classification_algorithms: true
 
-  # Regression algorithm families
   regression:
-    linear_models: true                # 8 algorithms
-    tree_based: true                   # 6 algorithms
-    svm: true                          # 3 algorithms
-    specialized: true                  # 3 algorithms
-    xgboost: true                      # 1 algorithm (if installed)
-    lightgbm: true                     # 1 algorithm (if installed)
-    catboost: true                     # 1 algorithm (if installed)
+    linear_models: true
+    tree_based: true
+    svm: true
+    specialized: true
+    xgboost: true
+    lightgbm: true
+    catboost: true
 
-  # Classification algorithm families
   classification:
-    linear_models: true                # 5 algorithms
-    tree_based: true                   # 6 algorithms
-    svm: true                          # 4 algorithms
-    naive_bayes: true                  # 5 algorithms
-    neighbors: true                    # 1 algorithm
-    ensemble: true                     # 1 algorithm
-    xgboost: true                      # 1 algorithm (if installed)
-    lightgbm: true                     # 1 algorithm (if installed)
-    catboost: true                     # 1 algorithm (if installed)
+    linear_models: true
+    tree_based: true
+    svm: true
+    naive_bayes: true
+    neighbors: true
+    ensemble: true
+    xgboost: true
+    lightgbm: true
+    catboost: true
 
-  # Model selection & reporting
-  n_best_models: 5                    # Number of best models to save separately
-  save_all_models: true               # Save individual model files
-  save_comparison: true               # Save comparison report
-  generate_summary: true              # Generate summary statistics
+  n_best_models: 5
+  save_all_models: true
+  save_comparison: true
+  generate_summary: true
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🆕 PHASE 6: ENSEMBLE METHODS (NEW!)
+# ════════════════════════════════════════════════════════════════════════════
+
+phase6:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Ensemble Method Selection
+  # ─────────────────────────────────────────────────────────────────────────
+
+  ensemble_methods:
+    enable_stacking: true           # Multi-level stacking (accurate, slower)
+    enable_blending: true           # Fast blending (5-10x faster)
+    enable_voting: true             # Weighted voting (fastest)
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Stacking Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+
+  stacking:
+    cv_folds: 5                     # Cross-validation folds for meta-features
+    meta_model: "logistic_regression"  # "logistic_regression", "ridge", "random_forest"
+    use_probabilities: true         # Use probability predictions vs hard predictions
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Blending Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+
+  blending:
+    holdout_fraction: 0.2           # Fraction of data for holdout validation
+    meta_model: "logistic_regression"
+    optimize_weights: true          # Optimize blend weights
+    weight_optimization_method: "sharpe"  # "sharpe", "robust", "diversity"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Voting Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+
+  voting:
+    weighting_strategy: "accuracy"  # "equal", "accuracy", "sharpe"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Analysis & Reporting
+  # ─────────────────────────────────────────────────────────────────────────
+
+  analysis:
+    calculate_diversity: true       # Calculate ensemble diversity metrics
+    generate_plots: true            # Generate ensemble comparison plots
+    output_path: "data/06_models"   # Output directory for ensemble models
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # General Settings
+  # ─────────────────────────────────────────────────────────────────────────
+
+  random_state: 42                  # For reproducibility
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LOGGING (All phases)
@@ -228,46 +244,4 @@ logging:
   log_preprocessing: true
   log_model_comparison: true
   log_algorithm_performance: true
-  log_level: "INFO"                    # Options: "DEBUG", "INFO", "WARNING", "ERROR"
-
-# ════════════════════════════════════════════════════════════════════════════
-# SUMMARY OF PERMANENT FEATURE EXPLOSION FIXES
-# ════════════════════════════════════════════════════════════════════════════
-#
-# This configuration includes 5 PERMANENT FIXES:
-#
-# FIX #1: ID Column Auto-Detection
-#   Problem: OneHotEncoding customerID (7,043 unique) → 7,043+ features!
-#   Solution: Auto-detect ID columns by name (id, customer, user, etc.)
-#             and cardinality (>95% unique = ID)
-#   Config: drop_id_columns: true, id_keywords: [...]
-#
-# FIX #2: Smart Categorical Encoding
-#   Problem: One-hot encoding all categoricals → explosion
-#   Solution: Cardinality-based strategy:
-#            ≤10 values → one-hot (creates N-1 features)
-#            11-50 values → label encode (creates 1 feature)
-#            >50 values → drop (not useful)
-#   Config: encoding_method: "smart", max_categories_to_onehot: 10
-#
-# FIX #3: Controlled Polynomial Features
-#   Problem: Polynomial(degree=3) on 21 features → 1,000+ features!
-#   Solution: Disabled by default, max degree 2, strict limits
-#   Config: polynomial_features: false, polynomial_degree: 2,
-#           max_polynomial_features: 50
-#
-# FIX #4: Variance-Based Filtering
-#   Problem: Low-variance features cause noise and overfitting
-#   Solution: Auto-remove near-constant features (variance < 0.01)
-#   Config: variance_threshold: 0.01, apply_variance_filter: true
-#
-# FIX #5: Explosion Safety Validation
-#   Problem: 10,964 features slip through unnoticed
-#   Solution: Hard limit (500 features max), raises error if exceeded
-#   Config: max_features_allowed: 500, validate_feature_count: true
-#
-# EXPECTED BEHAVIOR:
-#   Before: 21 features → 10,964 features (EXPLOSION!)
-#   After:  21 features → 25-50 features (SAFE!)
-#
-# ════════════════════════════════════════════════════════════════════════════
+  log_level: "INFO"

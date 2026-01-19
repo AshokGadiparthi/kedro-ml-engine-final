@@ -131,6 +131,18 @@ except Exception as e:
     create_phase4_pipeline = None
     PHASE4_AVAILABLE = False
 
+# 🆕 PHASE 6: ENSEMBLE METHODS (NEW!)
+PHASE6_AVAILABLE = False
+
+try:
+    from ml_engine.pipelines.phase6_ensemble_pipeline import create_pipeline as create_phase6_pipeline
+    logger.info("✅ Phase 6 (ensemble_methods) imported successfully")
+    PHASE6_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"⚠️  Phase 6 (ensemble_methods) not available: {str(e)[:60]}")
+    PHASE6_AVAILABLE = False
+    create_phase6_pipeline = None
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # 🆕 PHASE 5: ADVANCED EVALUATION, ANALYSIS & REPORTING (FIXED!)
@@ -284,6 +296,17 @@ def register_pipelines() -> Dict[str, Pipeline]:
         pipelines["algorithms"] = phase4_pipeline
         logger.info("✅ Phase 4 pipeline created (algorithms with PATH A+B+C ready)")
 
+    # 🆕 BUILD PHASE 6 PIPELINE
+    phase6_pipeline = None
+    if PHASE6_AVAILABLE and create_phase6_pipeline:
+        phase6_pipeline = create_phase6_pipeline()
+        pipelines["phase6"] = phase6_pipeline
+        pipelines["ensemble"] = phase6_pipeline
+        pipelines["ensemble_methods"] = phase6_pipeline
+        logger.info("✅ Phase 6 pipeline created (ensemble methods)")
+    else:
+        logger.warning("⚠️  Phase 6 not available")
+
     # ════════════════════════════════════════════════════════════════════════
     # BUILD COMPLETE PIPELINE (Phase 1-4) - GUARANTEED
     # ════════════════════════════════════════════════════════════════════════
@@ -313,6 +336,17 @@ def register_pipelines() -> Dict[str, Pipeline]:
 
         # Set as default (Phase 1-4 only - 100% backward compatible!)
         pipelines["__default__"] = complete_pipeline
+
+        # 🆕 BUILD COMPLETE PIPELINE (Phase 1-6)
+        if phase6_pipeline and complete_pipeline_parts:
+            complete_1to6 = complete_pipeline
+            complete_1to6 = complete_1to6 + phase6_pipeline
+
+            pipelines["complete_1_6"] = complete_1to6
+            pipelines["all_with_ensemble"] = complete_1to6
+            pipelines["end_to_end_full"] = complete_1to6
+
+            logger.info("✅ Complete Pipeline created (Phase 1-6)")
 
         logger.info("="*80)
         logger.info(f"✅ COMPLETE PIPELINE CREATED (Phase 1-4)")
@@ -403,6 +437,15 @@ def register_pipelines() -> Dict[str, Pipeline]:
         phase5_available_count += 1
     else:
         logger.warning("⚠️  Phase 5g (report_generator) - Not available")
+
+    logger.info(f"\n🆕 PHASE 6 (Ensemble Methods):")
+    if PHASE6_AVAILABLE:
+        logger.info(f"  ✅ Phase 6 available (ensemble methods)")
+        logger.info(f"     Methods: Stacking, Blending, Weighted Voting")
+        logger.info(f"     Can be run: kedro run --pipeline phase6")
+        logger.info(f"     Or as part: kedro run --pipeline complete_1_6")
+    else:
+        logger.info(f"  ⚠️  Phase 6 not available")
 
     logger.info(f"\nPhase 5 modules available: {phase5_available_count}/7")
     logger.info("\nPhase 5 Usage Examples:")
