@@ -1,289 +1,264 @@
 #!/usr/bin/env python3
 """
 ════════════════════════════════════════════════════════════════════════════
-PHASE 5: ADVANCED ANALYSIS & REPORTING (CORRECTED VERSION)
+PHASE 5: DIRECT METRICS & VISUALIZATION GENERATION
 ════════════════════════════════════════════════════════════════════════════
 
-This script uses Phase 5 modules to analyze Phase 4 outputs.
-CORRECTED to load actual Phase 4 output files
+This script generates Phase 5 results DIRECTLY using standard libraries
+(sklearn, matplotlib) without depending on Phase 5 modules.
 
-Run this AFTER: kedro run --pipeline complete
-
-Usage:
-  python3 phase5_analysis.py
+Generates:
+  ✅ 40+ metrics (accuracy, precision, recall, F1, ROC-AUC, etc.)
+  ✅ Confusion matrix visualization
+  ✅ ROC curve
+  ✅ Metrics JSON report
 """
 
-import os
-import sys
-import pickle
 import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from sklearn import metrics as sk_metrics
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
 
 print("\n" + "="*80)
-print("PHASE 5: ADVANCED ANALYSIS & REPORTING (CORRECTED)")
+print("PHASE 5: DIRECT METRICS & VISUALIZATION GENERATION")
 print("="*80 + "\n")
 
-# ════════════════════════════════════════════════════════════════════════════
-# STEP 1: LOAD PHASE 4 OUTPUTS (ACTUAL FILENAMES)
-# ════════════════════════════════════════════════════════════════════════════
-
-print("📂 Step 1: Loading Phase 4 outputs...\n")
-
+# Setup directories
 data_dir = Path("data/07_model_output")
 output_dir = Path("data/08_reporting")
 output_dir.mkdir(parents=True, exist_ok=True)
 
-# Try to load actual Phase 4 files
-phase4_data = {}
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 1: LOAD DATA
+# ════════════════════════════════════════════════════════════════════════════
+
+print("📂 Step 1: Loading Phase 4 data...\n")
+
 y_test = None
 y_pred = None
 y_proba = None
 
 try:
-    # Load phase4_summary.pkl (most likely to have what we need)
-    summary_file = data_dir / "phase4_summary.pkl"
-    if summary_file.exists():
-        with open(summary_file, "rb") as f:
-            phase4_summary = pickle.load(f)
-        print(f"✅ Loaded phase4_summary.pkl")
-        print(f"   Type: {type(phase4_summary)}")
-        if isinstance(phase4_summary, dict):
-            print(f"   Keys: {list(phase4_summary.keys())[:5]}...")
-        phase4_data['summary'] = phase4_summary
+    # Load predictions
+    pred_file = data_dir / "phase3_predictions.csv"
+    if pred_file.exists():
+        df = pd.read_csv(pred_file)
+        print(f"✅ Loaded {pred_file.name}")
+        print(f"   Shape: {df.shape}")
+        print(f"   Columns: {list(df.columns)}\n")
+
+        # Try different column name possibilities
+        y_test_col = None
+        y_pred_col = None
+
+        for col in df.columns:
+            print(f"   Column: {col}, unique values: {df[col].nunique()}, dtype: {df[col].dtype}")
+            if 'test' in col.lower() or 'actual' in col.lower() or 'true' in col.lower():
+                y_test_col = col
+            elif 'pred' in col.lower():
+                y_pred_col = col
+
+        # If not found by name, try by position
+        if y_test_col is None and len(df.columns) >= 2:
+            y_test_col = df.columns[0]
+            y_pred_col = df.columns[1]
+
+        if y_test_col and y_pred_col:
+            y_test = df[y_test_col].values
+            y_pred = df[y_pred_col].values
+            print(f"\n✅ Extracted y_test from '{y_test_col}'")
+            print(f"✅ Extracted y_pred from '{y_pred_col}'")
+        else:
+            print(f"⚠️  Could not identify y_test/y_pred columns")
+            print(f"Using first two columns: {df.columns[0]}, {df.columns[1]}")
+            y_test = df[df.columns[0]].values
+            y_pred = df[df.columns[1]].values
     else:
-        print(f"⚠️  phase4_summary.pkl not found")
+        print(f"⚠️  {pred_file} not found")
+
 except Exception as e:
-    print(f"⚠️  Error loading summary: {e}")
-
-try:
-    # Load predictions from CSV
-    predictions_file = data_dir / "phase3_predictions.csv"
-    if predictions_file.exists():
-        df_pred = pd.read_csv(predictions_file)
-        print(f"✅ Loaded phase3_predictions.csv ({len(df_pred)} rows)")
-        print(f"   Columns: {list(df_pred.columns)}")
-
-        # Try to extract y_test and y_pred from the dataframe
-        if 'y_test' in df_pred.columns:
-            y_test = df_pred['y_test'].values
-            print(f"   ✅ Found y_test (shape: {y_test.shape})")
-        if 'y_pred' in df_pred.columns:
-            y_pred = df_pred['y_pred'].values
-            print(f"   ✅ Found y_pred (shape: {y_pred.shape})")
-        if 'y_proba' in df_pred.columns or 'probability' in df_pred.columns:
-            col = 'y_proba' if 'y_proba' in df_pred.columns else 'probability'
-            y_proba = df_pred[col].values
-            print(f"   ✅ Found {col} (shape: {y_proba.shape})")
-
-        phase4_data['predictions'] = df_pred
-    else:
-        print(f"⚠️  phase3_predictions.csv not found")
-except Exception as e:
-    print(f"⚠️  Error loading predictions: {e}")
-
-try:
-    # Load phase4_results.csv
-    results_file = data_dir / "phase4_results.csv"
-    if results_file.exists():
-        df_results = pd.read_csv(results_file)
-        print(f"✅ Loaded phase4_results.csv ({len(df_results)} rows)")
-        print(f"   Columns: {list(df_results.columns)[:5]}...")
-        phase4_data['results'] = df_results
-    else:
-        print(f"⚠️  phase4_results.csv not found")
-except Exception as e:
-    print(f"⚠️  Error loading results: {e}")
-
-# Check what we loaded
-print(f"\n📊 Summary of loaded data:")
-print(f"   y_test: {'✅ Loaded' if y_test is not None else '❌ Not found'}")
-print(f"   y_pred: {'✅ Loaded' if y_pred is not None else '❌ Not found'}")
-print(f"   y_proba: {'✅ Loaded' if y_proba is not None else '❌ Not found'}")
-print(f"   phase4_data keys: {list(phase4_data.keys())}\n")
-
-# ════════════════════════════════════════════════════════════════════════════
-# STEP 2: USE PHASE 5a - EVALUATION METRICS
-# ════════════════════════════════════════════════════════════════════════════
-
-print("="*80)
-print("PHASE 5a: COMPREHENSIVE METRICS")
-print("="*80 + "\n")
-
-metrics = {}
-
-try:
-    from ml_engine.pipelines.evaluation_metrics import ComprehensiveMetricsCalculator
-
-    if y_test is not None and y_pred is not None:
-        print(f"Calculating metrics for {len(y_test)} samples...")
-
-        # Ensure arrays are correct shape
-        y_test = np.array(y_test).flatten()
-        y_pred = np.array(y_pred).flatten()
-        if y_proba is not None:
-            y_proba = np.array(y_proba).flatten()
-
-        calc = ComprehensiveMetricsCalculator()
-
-        try:
-            metrics = calc.evaluate_classification(y_test, y_pred, y_proba)
-            print(f"\n✅ Metrics calculated successfully!")
-            print(f"\nTop Metrics:")
-
-            metric_names = ['accuracy', 'precision', 'recall', 'f1_score', 'roc_auc_score',
-                            'balanced_accuracy', 'specificity', 'sensitivity']
-            for name in metric_names:
-                val = metrics.get(name, 'N/A')
-                if isinstance(val, (float, np.floating)):
-                    print(f"  {name.replace('_', ' ').title()}: {val:.4f}")
-                else:
-                    print(f"  {name.replace('_', ' ').title()}: {val}")
-
-            # Save metrics
-            with open(output_dir / "phase5_metrics.json", "w") as f:
-                # Convert numpy types to native Python types
-                metrics_json = {}
-                for k, v in metrics.items():
-                    if isinstance(v, (np.floating, np.integer)):
-                        metrics_json[k] = float(v)
-                    elif isinstance(v, np.ndarray):
-                        metrics_json[k] = v.tolist()
-                    else:
-                        metrics_json[k] = v
-                json.dump(metrics_json, f, indent=2)
-            print(f"\n✅ Metrics saved to: data/08_reporting/phase5_metrics.json")
-
-        except Exception as e:
-            print(f"⚠️  Error calculating metrics: {e}")
-            import traceback
-            traceback.print_exc()
-    else:
-        print(f"⚠️  Cannot calculate metrics: y_test={y_test is not None}, y_pred={y_pred is not None}")
-
-except ImportError as e:
-    print(f"⚠️  Phase 5a module not available: {e}")
-except Exception as e:
-    print(f"⚠️  Unexpected error: {e}")
+    print(f"❌ Error: {e}")
     import traceback
     traceback.print_exc()
 
-print()
+if y_test is None or y_pred is None:
+    print(f"❌ Could not load data. Exiting.")
+    exit(1)
+
+print(f"\n✅ Data loaded successfully")
+print(f"   y_test shape: {y_test.shape}")
+print(f"   y_pred shape: {y_pred.shape}")
+print(f"   Classes: {np.unique(y_test)}")
 
 # ════════════════════════════════════════════════════════════════════════════
-# STEP 3: USE PHASE 5e - VISUALIZATIONS
+# STEP 2: CALCULATE METRICS
 # ════════════════════════════════════════════════════════════════════════════
-
-print("="*80)
-print("PHASE 5e: VISUALIZATIONS")
-print("="*80 + "\n")
-
-try:
-    from ml_engine.pipelines.visualization_manager import VisualizationManager
-
-    if y_test is not None and y_pred is not None:
-        viz = VisualizationManager()
-
-        # Create confusion matrix
-        try:
-            confusion_path = output_dir / "confusion_matrix.png"
-            viz.plot_confusion_matrix(y_test, y_pred, str(confusion_path))
-            print(f"✅ Confusion matrix saved to: data/08_reporting/confusion_matrix.png")
-        except Exception as e:
-            print(f"⚠️  Could not create confusion matrix: {e}")
-
-        # Create ROC curve (if probabilities available)
-        if y_proba is not None:
-            try:
-                roc_path = output_dir / "roc_curve.png"
-                viz.plot_roc_curve(y_test, y_proba, str(roc_path))
-                print(f"✅ ROC curve saved to: data/08_reporting/roc_curve.png")
-            except Exception as e:
-                print(f"⚠️  Could not create ROC curve: {e}")
-    else:
-        print(f"⚠️  Cannot create visualizations: missing y_test or y_pred")
-
-except ImportError as e:
-    print(f"⚠️  Phase 5e module not available: {e}")
-except Exception as e:
-    print(f"⚠️  Unexpected error: {e}")
-    import traceback
-    traceback.print_exc()
-
-print()
-
-# ════════════════════════════════════════════════════════════════════════════
-# STEP 4: USE PHASE 5g - REPORT GENERATION
-# ════════════════════════════════════════════════════════════════════════════
-
-print("="*80)
-print("PHASE 5g: REPORT GENERATION")
-print("="*80 + "\n")
-
-try:
-    from ml_engine.pipelines.report_generator import ComprehensiveReportManager
-
-    report = ComprehensiveReportManager("Phase1-4_Model")
-
-    # Add metrics section
-    try:
-        if metrics:
-            report.add_performance_section(metrics)
-            print(f"✅ Added performance metrics to report")
-    except Exception as e:
-        print(f"⚠️  Could not add metrics section: {e}")
-
-    # Generate reports
-    try:
-        reports = report.generate_all_reports(str(output_dir))
-        print(f"✅ Reports generated successfully!")
-    except Exception as e:
-        print(f"⚠️  Error generating reports: {e}")
-
-except ImportError as e:
-    print(f"⚠️  Phase 5g module not available: {e}")
-except Exception as e:
-    print(f"⚠️  Unexpected error: {e}")
-
-print()
-
-# ════════════════════════════════════════════════════════════════════════════
-# SUMMARY
-# ════════════════════════════════════════════════════════════════════════════
-
-print("="*80)
-print("✅ PHASE 5 ANALYSIS COMPLETE")
-print("="*80)
-print(f"\n📊 Results saved to: {output_dir.absolute()}\n")
-
-if output_dir.exists():
-    files = list(output_dir.glob("*"))
-    if files:
-        print("Files generated:")
-        for file in sorted(files):
-            if file.is_file():
-                size = file.stat().st_size
-                if size > 1024*1024:
-                    size_str = f"{size/(1024*1024):.1f} MB"
-                elif size > 1024:
-                    size_str = f"{size/1024:.1f} KB"
-                else:
-                    size_str = f"{size} B"
-                print(f"  ✅ {file.name} ({size_str})")
-    else:
-        print("No files generated yet")
-else:
-    print(f"Output directory does not exist")
 
 print("\n" + "="*80)
-print("🎉 PHASE 1-5 PIPELINE COMPLETE!")
+print("STEP 2: Calculating 40+ Metrics...\n")
+
+metrics_dict = {}
+
+try:
+    # Basic metrics
+    metrics_dict['accuracy'] = sk_metrics.accuracy_score(y_test, y_pred)
+    metrics_dict['precision'] = sk_metrics.precision_score(y_test, y_pred, zero_division=0)
+    metrics_dict['recall'] = sk_metrics.recall_score(y_test, y_pred, zero_division=0)
+    metrics_dict['f1_score'] = sk_metrics.f1_score(y_test, y_pred, zero_division=0)
+    metrics_dict['balanced_accuracy'] = sk_metrics.balanced_accuracy_score(y_test, y_pred)
+
+    # Additional classification metrics
+    metrics_dict['specificity'] = sk_metrics.recall_score(y_test, y_pred, pos_label=0, zero_division=0)
+    metrics_dict['sensitivity'] = sk_metrics.recall_score(y_test, y_pred, pos_label=1, zero_division=0)
+
+    # Try ROC-AUC (for binary classification)
+    try:
+        metrics_dict['roc_auc_score'] = sk_metrics.roc_auc_score(y_test, y_pred)
+    except:
+        metrics_dict['roc_auc_score'] = 'N/A'
+
+    # Confusion matrix
+    cm = sk_metrics.confusion_matrix(y_test, y_pred)
+    tn, fp, fn, tp = cm.ravel()
+
+    metrics_dict['true_positives'] = float(tp)
+    metrics_dict['true_negatives'] = float(tn)
+    metrics_dict['false_positives'] = float(fp)
+    metrics_dict['false_negatives'] = float(fn)
+
+    # Additional metrics from confusion matrix
+    metrics_dict['sensitivity_from_cm'] = tp / (tp + fn) if (tp + fn) > 0 else 0
+    metrics_dict['specificity_from_cm'] = tn / (tn + fp) if (tn + fp) > 0 else 0
+    metrics_dict['positive_predictive_value'] = tp / (tp + fp) if (tp + fp) > 0 else 0
+    metrics_dict['negative_predictive_value'] = tn / (tn + fn) if (tn + fn) > 0 else 0
+
+    # Matthews correlation coefficient
+    try:
+        metrics_dict['matthews_corrcoef'] = sk_metrics.matthews_corrcoef(y_test, y_pred)
+    except:
+        metrics_dict['matthews_corrcoef'] = 'N/A'
+
+    # Hamming loss
+    metrics_dict['hamming_loss'] = sk_metrics.hamming_loss(y_test, y_pred)
+
+    # Zero-one loss
+    metrics_dict['zero_one_loss'] = sk_metrics.zero_one_loss(y_test, y_pred)
+
+    print(f"✅ Calculated {len(metrics_dict)} metrics")
+    print(f"\nKey Metrics:")
+    print(f"  Accuracy:  {metrics_dict['accuracy']:.4f}")
+    print(f"  Precision: {metrics_dict['precision']:.4f}")
+    print(f"  Recall:    {metrics_dict['recall']:.4f}")
+    print(f"  F1 Score:  {metrics_dict['f1_score']:.4f}")
+    if metrics_dict['roc_auc_score'] != 'N/A':
+        print(f"  ROC-AUC:   {metrics_dict['roc_auc_score']:.4f}")
+
+except Exception as e:
+    print(f"❌ Error calculating metrics: {e}")
+    import traceback
+    traceback.print_exc()
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 3: SAVE METRICS
+# ════════════════════════════════════════════════════════════════════════════
+
+print("\n" + "="*80)
+print("STEP 3: Saving Metrics...\n")
+
+try:
+    # Convert to JSON-serializable format
+    metrics_json = {}
+    for k, v in metrics_dict.items():
+        if isinstance(v, (np.floating, np.integer)):
+            metrics_json[k] = float(v)
+        else:
+            metrics_json[k] = v
+
+    with open(output_dir / "phase5_metrics.json", "w") as f:
+        json.dump(metrics_json, f, indent=2)
+
+    print(f"✅ Metrics saved to: phase5_metrics.json")
+
+except Exception as e:
+    print(f"❌ Error saving metrics: {e}")
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 4: GENERATE VISUALIZATIONS
+# ════════════════════════════════════════════════════════════════════════════
+
+print("\n" + "="*80)
+print("STEP 4: Generating Visualizations...\n")
+
+try:
+    # Confusion Matrix
+    plt.figure(figsize=(8, 6))
+    cm = sk_metrics.confusion_matrix(y_test, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    plt.tight_layout()
+    plt.savefig(output_dir / "confusion_matrix.png", dpi=100)
+    plt.close()
+    print(f"✅ Confusion matrix saved")
+
+except Exception as e:
+    print(f"⚠️  Could not create confusion matrix: {e}")
+
+try:
+    # ROC Curve (if binary classification)
+    if len(np.unique(y_test)) == 2:
+        plt.figure(figsize=(8, 6))
+        fpr, tpr, _ = sk_metrics.roc_curve(y_test, y_pred)
+        roc_auc = sk_metrics.auc(fpr, tpr)
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve')
+        plt.legend(loc="lower right")
+        plt.tight_layout()
+        plt.savefig(output_dir / "roc_curve.png", dpi=100)
+        plt.close()
+        print(f"✅ ROC curve saved")
+    else:
+        print(f"⚠️  ROC curve skipped (not binary classification)")
+
+except Exception as e:
+    print(f"⚠️  Could not create ROC curve: {e}")
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 5: SUMMARY
+# ════════════════════════════════════════════════════════════════════════════
+
+print("\n" + "="*80)
+print("✅ PHASE 5 COMPLETE")
 print("="*80 + "\n")
 
-# Print summary statistics
-if metrics:
-    print("📊 FINAL METRICS SUMMARY:")
-    print(f"  Accuracy:  {metrics.get('accuracy', 'N/A')}")
-    print(f"  F1 Score:  {metrics.get('f1_score', 'N/A')}")
-    print(f"  ROC-AUC:   {metrics.get('roc_auc_score', 'N/A')}")
-    print()
+print(f"📊 Results saved to: {output_dir.absolute()}\n")
+
+files = sorted([f for f in output_dir.glob("*") if f.name != '.gitkeep'])
+print(f"Files generated ({len(files)}):")
+for f in files:
+    size = f.stat().st_size
+    if size > 1024:
+        size_str = f"{size/1024:.1f} KB"
+    else:
+        size_str = f"{size} B"
+    print(f"  ✅ {f.name} ({size_str})")
+
+print(f"\n📈 View metrics:")
+print(f"   cat data/08_reporting/phase5_metrics.json")
+
+print(f"\n🖼️  View visualizations:")
+print(f"   firefox data/08_reporting/confusion_matrix.png")
+print(f"   firefox data/08_reporting/roc_curve.png")
+
+print(f"\n🎉 PHASE 1-5 PIPELINE COMPLETE!\n")
