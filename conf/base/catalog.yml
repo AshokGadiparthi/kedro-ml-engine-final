@@ -293,77 +293,77 @@ phase4_save_status:
 
 # Phase 5a: Training Strategies Module Output
 training_strategies_results:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/08_reporting/training_strategies_results.pkl
   save_args:
     protocol: 4
 
 # Phase 5b: Evaluation Metrics Module Output
 comprehensive_metrics:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/08_reporting/comprehensive_metrics.pkl
   save_args:
     protocol: 4
 
 # Alternative: Save metrics as JSON for easy reading
 comprehensive_metrics_json:
-  type: pandas.JSONDataSet
+  type: pandas.JSONDataset
   filepath: data/08_reporting/comprehensive_metrics.json
 
 # Phase 5c: Cross-Validation Strategies Module Output
 cross_validation_results:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/08_reporting/cross_validation_results.pkl
   save_args:
     protocol: 4
 
 # Phase 5d: Model Comparison Module Output
 model_comparison_results:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/08_reporting/model_comparison_results.pkl
   save_args:
     protocol: 4
 
 # Alternative: Save comparison as CSV for Excel
 model_comparison_csv:
-  type: pandas.CSVDataSet
+  type: pandas.CSVDataset
   filepath: data/08_reporting/model_comparison.csv
 
 # Phase 5e: Visualization Manager Module Output
 phase5_visualizations:
-  type: pandas.JSONDataSet
+  type: pandas.JSONDataset
   filepath: data/08_reporting/visualizations_index.json
 
 # Phase 5f: Hyperparameter Analysis Module Output
 hyperparameter_analysis_results:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/08_reporting/hyperparameter_analysis.pkl
   save_args:
     protocol: 4
 
 # Alternative: Save sensitivity analysis as CSV
 hyperparameter_sensitivity_csv:
-  type: pandas.CSVDataSet
+  type: pandas.CSVDataset
   filepath: data/08_reporting/hyperparameter_sensitivity.csv
 
 # Phase 5g: Report Generation Module Outputs
 
 # HTML Report (main output)
 report_html:
-  type: text.TextDataSet
+  type: text.TextDataset
   filepath: data/08_reporting/report.html
 
 # JSON Report (machine-readable)
 report_json:
-  type: text.TextDataSet
+  type: text.TextDataset
   filepath: data/08_reporting/report.json
 
 # Text Report (for email, text editors)
 report_txt:
-  type: text.TextDataSet
+  type: text.TextDataset
   filepath: data/08_reporting/executive_summary.txt
 
 # Model Card (standardized format)
 report_model_card:
-  type: text.TextDataSet
+  type: text.TextDataset
   filepath: data/08_reporting/model_card.md
