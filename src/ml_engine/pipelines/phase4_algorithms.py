@@ -343,7 +343,10 @@ def phase4_generate_roc_curves_and_confusion_matrices(
 
             try:
                 y_pred_proba = model.predict_proba(X_test)[:, 1]
-                fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+                # Get unique classes to determine positive label
+                unique_classes = np.unique(y_test)
+                pos_label = unique_classes[-1] if len(unique_classes) == 2 else 1
+                fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba, pos_label=pos_label)
                 roc_auc = auc(fpr, tpr)
 
                 ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:.4f})', linewidth=2)
@@ -452,6 +455,13 @@ def phase4_create_ensemble_voting(
     best_model = trained_models[best_model_name]
     log.info(f"\n✅ Best model selected for PATH C: {best_model_name}")
 
+    # If best model is incompatible with ensemble, skip ensemble and return early
+    if 'CatBoost' in best_model_name or 'LGBM' in best_model_name:
+        log.warning(f"⚠️ Best model ({best_model_name}) is not compatible with sklearn ensemble voting")
+        log.info("✅ Skipping ensemble voting (PATH A) - using best single model instead")
+        # Return results with just the best model, no ensemble
+        return results_df, trained_models, best_model
+
     # Create voting models from already-filtered top_5
     top_models_dict = {name: trained_models[name] for name in top_5 if name in trained_models}
 
@@ -536,6 +546,17 @@ def phase4_generate_learning_curves(
 
     if isinstance(y_train, pd.DataFrame):
         y_train = y_train.iloc[:, 0]
+
+    # Check if model is CatBoost or LightGBM (sklearn compatibility issues)
+    model_class_name = type(phase4_best_model).__name__
+    if 'CatBoost' in model_class_name or 'LGBM' in model_class_name:
+        log.warning(f"⚠️  {model_class_name} has sklearn compatibility issues with learning_curve")
+        log.info(f"✅ Skipping learning curves for {model_class_name} - not compatible with sklearn.model_selection.learning_curve")
+        return {
+            'learning_curves_generated': False,
+            'reason': f'{model_class_name} not compatible with sklearn learning_curve',
+            'plot_path': None
+        }
 
     try:
         train_sizes, train_scores, val_scores = learning_curve(
