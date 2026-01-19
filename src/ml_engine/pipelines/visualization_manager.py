@@ -21,9 +21,15 @@ import numpy as np
 import logging
 from typing import Dict, List, Tuple, Any, Optional
 from sklearn.metrics import (
-    confusion_matrix, roc_curve, auc, calibration_curve,
+    confusion_matrix, roc_curve, auc,
     classification_report
 )
+
+try:
+    from sklearn.metrics import calibration_curve
+    CALIBRATION_AVAILABLE = True
+except ImportError:
+    CALIBRATION_AVAILABLE = False
 import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings

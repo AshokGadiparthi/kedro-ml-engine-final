@@ -473,7 +473,7 @@ class ExecutiveSummaryGenerator:
         summary = f"EXECUTIVE SUMMARY: {self.model_name}\n"
         summary += f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
 
-        for section_name, content in self.sections:
+        for section_name, content in self.sections.items():
             summary += f"{section_name}:\n"
             summary += "-" * 40 + "\n"
             summary += content + "\n\n"
