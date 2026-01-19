@@ -291,35 +291,7 @@ phase4_save_status:
   type: text.text_dataset.TextDataset
   filepath: data/06_models/phase4/phase4_save_status.txt
 
-  """
-================================================================================
-CATALOG ENTRIES FOR PHASE 5 - ADD TO conf/base/catalog.yml
-================================================================================
-
-Location: conf/base/catalog.yml
-
-These entries define where Phase 5 outputs will be saved and loaded from.
-Add these entries at the end of your existing catalog (after Phase 1-4 entries).
-
-================================================================================
-"""
-
-# ════════════════════════════════════════════════════════════════════════════
-# PHASE 5: ADVANCED EVALUATION, ANALYSIS & REPORTING
-# ════════════════════════════════════════════════════════════════════════════
-#
-# These are the outputs from Phase 5 modules.
-# They will be saved here and can be accessed in future runs.
-#
-# HOW PHASE 5 GETS ITS INPUT DATA:
-#   1. Phase 1-4 create outputs (already in your catalog)
-#   2. Phase 5 declares these as inputs
-#   3. Kedro finds them in catalog by matching names
-#   4. Kedro loads and passes to Phase 5
-#   5. Phase 5 saves outputs to these new entries
-#
-# ════════════════════════════════════════════════════════════════════════════
-
+ 
 # Phase 5a: Training Strategies Module Output
 training_strategies_results:
   type: pickle.PickleDataSet
@@ -396,56 +368,3 @@ report_txt:
 report_model_card:
   type: text.TextDataSet
   filepath: data/08_reporting/model_card.md
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# HOW TO ADD THESE TO YOUR catalog.yml
-# ════════════════════════════════════════════════════════════════════════════
-#
-# Option 1: Copy-paste entire section at end of catalog.yml
-#
-# Option 2: Add entries one by one (minimum required):
-#   - comprehensive_metrics (Phase 5b output)
-#   - model_comparison_results (Phase 5d output)
-#   - report_html (Phase 5g output)
-#   (Other entries optional)
-#
-# Option 3: Use defaults (Kedro can auto-create catalog entries)
-#   - If an entry is missing, Kedro will create it automatically
-#   - This is convenient but less explicit
-#
-# ════════════════════════════════════════════════════════════════════════════
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# REFERENCE: YOUR EXISTING PHASE 1-4 CATALOG ENTRIES
-# ════════════════════════════════════════════════════════════════════════════
-#
-# These are the outputs Phase 5 will USE as INPUTS:
-# (You already have these defined in your catalog!)
-#
-#   best_model (Phase 3 output)
-#     ↓ Phase 5 reads this
-#
-#   predictions (Phase 3 or 4 output)
-#     ↓ Phase 5 reads this
-#
-#   y_test (Phase 1 or 2 output)
-#     ↓ Phase 5 reads this
-#
-#   X_test_selected (Phase 2 output)
-#     ↓ Phase 5 reads this
-#
-#   model_metrics (Phase 3 or 4 output)
-#     ↓ Phase 5 reads this
-#
-#   feature_importance (Phase 2 output)
-#     ↓ Phase 5 reads this
-#
-#   ensemble_results (Phase 4 output)
-#     ↓ Phase 5 reads this
-#
-# Kedro automatically finds and loads these!
-# No changes needed to existing catalog entries!
-#
-# ════════════════════════════════════════════════════════════════════════════
