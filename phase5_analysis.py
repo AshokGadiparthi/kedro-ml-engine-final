@@ -129,10 +129,25 @@ try:
 
     print(f"✅ Calculated {len([k for k in metrics_dict.keys() if k != 'classification_report'])} metrics")
     print(f"\n📊 Key Metrics:")
-    print(f"  Accuracy:  {metrics_dict['accuracy']:.4f}")
-    print(f"  Precision: {metrics_dict['precision']:.4f}")
-    print(f"  Recall:    {metrics_dict['recall']:.4f}")
-    print(f"  F1 Score:  {metrics_dict['f1_score']:.4f}\n")
+
+    # Only print metrics that exist in the dictionary
+    metrics_to_show = {
+        'accuracy': 'Accuracy',
+        'precision': 'Precision',
+        'recall': 'Recall',
+        'f1_score': 'F1 Score',
+        'balanced_accuracy': 'Balanced Accuracy',
+        'mcc': 'Matthews Correlation',
+        'kappa': 'Cohens Kappa'
+    }
+
+    for key, label in metrics_to_show.items():
+        if key in metrics_dict:
+            value = metrics_dict[key]
+            if isinstance(value, (int, float)):
+                print(f"  {label}: {value:.4f}")
+
+    print()
 
 except Exception as e:
     print(f"❌ Error calculating metrics: {e}")
